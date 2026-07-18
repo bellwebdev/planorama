@@ -1,0 +1,24 @@
+# Project docs kept out of the public repo
+system-design.md
+CLAUDE.md
+security-audits.md
+
+# Secrets
+.env
+
+# .NET
+backend/**/bin/
+backend/**/obj/
+*.user
+
+# Node / Vite
+node_modules/
+frontend/dist/
+
+# Generated from shared/tokens.json (npm run tokens)
+frontend/src/globals.css
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/

@@ -1,0 +1,5 @@
+# Local/dev entrypoint. On the VPS, replace :80 with the API domain
+# (e.g. api.planorama.example) and Caddy provisions TLS automatically.
+:80 {
+	reverse_proxy api:8080
+}

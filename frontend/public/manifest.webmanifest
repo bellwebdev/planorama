@@ -1,0 +1,10 @@
+{
+  "name": "Planorama",
+  "short_name": "Planorama",
+  "description": "Collaborative family trip planning",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#C2410C",
+  "icons": []
+}

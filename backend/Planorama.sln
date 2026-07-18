@@ -1,0 +1,50 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{4C15769E-0C8F-4518-8F3D-81DAF777BCB2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Planorama.Core", "src\Planorama.Core\Planorama.Core.csproj", "{6B3317F8-044F-4A1A-9CB0-FA2910ADA394}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Planorama.Api", "src\Planorama.Api\Planorama.Api.csproj", "{C5BC94C2-6E83-4F50-9D59-035304636A34}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Planorama.Worker", "src\Planorama.Worker\Planorama.Worker.csproj", "{DFAFCEA0-F221-44CB-8F82-725D09ADD50A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{F1D8BBD7-52FC-47AF-AB9E-9BD9CC09FECB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Planorama.Tests", "tests\Planorama.Tests\Planorama.Tests.csproj", "{7F358875-56AD-475B-9422-43B1CEA5FE7E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6B3317F8-044F-4A1A-9CB0-FA2910ADA394}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6B3317F8-044F-4A1A-9CB0-FA2910ADA394}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6B3317F8-044F-4A1A-9CB0-FA2910ADA394}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6B3317F8-044F-4A1A-9CB0-FA2910ADA394}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C5BC94C2-6E83-4F50-9D59-035304636A34}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C5BC94C2-6E83-4F50-9D59-035304636A34}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C5BC94C2-6E83-4F50-9D59-035304636A34}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C5BC94C2-6E83-4F50-9D59-035304636A34}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DFAFCEA0-F221-44CB-8F82-725D09ADD50A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DFAFCEA0-F221-44CB-8F82-725D09ADD50A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DFAFCEA0-F221-44CB-8F82-725D09ADD50A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DFAFCEA0-F221-44CB-8F82-725D09ADD50A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7F358875-56AD-475B-9422-43B1CEA5FE7E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7F358875-56AD-475B-9422-43B1CEA5FE7E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7F358875-56AD-475B-9422-43B1CEA5FE7E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7F358875-56AD-475B-9422-43B1CEA5FE7E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{6B3317F8-044F-4A1A-9CB0-FA2910ADA394} = {4C15769E-0C8F-4518-8F3D-81DAF777BCB2}
+		{C5BC94C2-6E83-4F50-9D59-035304636A34} = {4C15769E-0C8F-4518-8F3D-81DAF777BCB2}
+		{DFAFCEA0-F221-44CB-8F82-725D09ADD50A} = {4C15769E-0C8F-4518-8F3D-81DAF777BCB2}
+		{7F358875-56AD-475B-9422-43B1CEA5FE7E} = {F1D8BBD7-52FC-47AF-AB9E-9BD9CC09FECB}
+	EndGlobalSection
+EndGlobal
