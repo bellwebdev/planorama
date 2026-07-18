@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Planorama.Api.Options;
+using Planorama.Core.Configuration;
 using Planorama.Core.Data;
 using Planorama.Core.Domain;
 using Serilog;
@@ -10,6 +11,12 @@ using Serilog;
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .CreateBootstrapLogger();
+
+// Must run before CreateBuilder(args) snapshots environment variables into configuration.
+if (string.Equals(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), "Development", StringComparison.OrdinalIgnoreCase))
+{
+    DotEnvLoader.ApplyLocalDevDefaults(Directory.GetCurrentDirectory());
+}
 
 try
 {

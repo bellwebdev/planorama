@@ -1,10 +1,17 @@
 using Hangfire;
 using Hangfire.PostgreSql;
+using Planorama.Core.Configuration;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .CreateBootstrapLogger();
+
+// Must run before CreateApplicationBuilder(args) snapshots environment variables into configuration.
+if (string.Equals(Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT"), "Development", StringComparison.OrdinalIgnoreCase))
+{
+    DotEnvLoader.ApplyLocalDevDefaults(Directory.GetCurrentDirectory());
+}
 
 try
 {
