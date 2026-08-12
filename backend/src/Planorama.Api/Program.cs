@@ -1,11 +1,20 @@
 using System.Text;
+using FluentValidation;
+using Hangfire;
+using Hangfire.PostgreSql;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Planorama.Api.Auth;
+using Planorama.Api.Endpoints;
+using Planorama.Api.ErrorHandling;
 using Planorama.Api.Options;
+using Planorama.Core.Auth;
 using Planorama.Core.Configuration;
 using Planorama.Core.Data;
 using Planorama.Core.Domain;
+using Planorama.Core.Options;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -33,6 +42,8 @@ try
         .ValidateOnStart();
     builder.Services.AddOptions<CorsOptions>()
         .BindConfiguration(CorsOptions.SectionName);
+    builder.Services.AddOptions<EmailOptions>()
+        .BindConfiguration(EmailOptions.SectionName);
 
     builder.Services.AddDbContext<PlanoramaDbContext>(options =>
         options.UseNpgsql(builder.Configuration.GetConnectionString("Db")));
@@ -42,9 +53,31 @@ try
         {
             options.User.RequireUniqueEmail = true;
             options.SignIn.RequireConfirmedEmail = true;
+            options.Password.RequiredLength = 10;
+            options.Password.RequireNonAlphanumeric = true;
         })
         .AddEntityFrameworkStores<PlanoramaDbContext>()
-        .AddDefaultTokenProviders();
+        .AddDefaultTokenProviders()
+        .AddSignInManager();
+
+    // Confirmation tokens use DataProtectorTokenProvider; without persisted keys they don't
+    // survive a container restart, breaking confirmation links in prod (stateless containers).
+    builder.Services.AddDataProtection()
+        .PersistKeysToDbContext<PlanoramaDbContext>()
+        .SetApplicationName("planorama");
+
+    // Client-only: enqueues jobs into the same Postgres-backed queue Planorama.Worker polls.
+    // No AddHangfireServer() here — the Api process never executes jobs, only Worker does.
+    // Serializer settings must match Planorama.Worker's exactly, since both share one queue.
+    builder.Services.AddHangfire(config => config
+        .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+        .UseSimpleAssemblyNameTypeSerializer()
+        .UseRecommendedSerializerSettings()
+        .UsePostgreSqlStorage(options => options.UseNpgsqlConnection(builder.Configuration.GetConnectionString("Db"))));
+
+    builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+    builder.Services.AddScoped<IAccessTokenIssuer, JwtAccessTokenIssuer>();
+    builder.Services.AddScoped<IAuthService, AuthService>();
 
     var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
     builder.Services
@@ -69,6 +102,7 @@ try
         .AllowAnyHeader()
         .AllowAnyMethod()));
 
+    builder.Services.AddExceptionHandler<AuthProblemExceptionHandler>();
     builder.Services.AddProblemDetails();
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
@@ -96,6 +130,7 @@ try
 
     var v1 = app.MapGroup("/api/v1");
     v1.MapGet("/meta", () => new ApiMeta("planorama", "v1"));
+    v1.MapAuthEndpoints();
 
     app.Run();
 }

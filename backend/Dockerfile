@@ -21,7 +21,7 @@ ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 ENTRYPOINT ["dotnet", "Planorama.Api.dll"]
 
-FROM mcr.microsoft.com/dotnet/runtime:8.0 AS worker
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS worker
 WORKDIR /app
 COPY --from=build /out/worker .
 ENTRYPOINT ["dotnet", "Planorama.Worker.dll"]
