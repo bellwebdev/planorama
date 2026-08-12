@@ -1,5 +1,10 @@
-namespace Planorama.Api.Options;
+namespace Planorama.Core.Options;
 
+/// <summary>
+/// Lives in Core (not Api, despite being JWT-specific) because <c>AuthService</c> needs
+/// <see cref="RefreshTokenDays"/> to compute refresh-token expiry, and Core can't depend on Api.
+/// Token issuance itself still happens in Api's <c>JwtAccessTokenIssuer</c>, which owns the JWT packages.
+/// </summary>
 public class JwtOptions
 {
     public const string SectionName = "Jwt";

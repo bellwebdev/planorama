@@ -3,7 +3,8 @@ services:
     image: caddy:2
     restart: unless-stopped
     ports:
-      - "80:80"
+      # Host 8080: local port 80 is held by Laravel Valet's nginx on another macOS account.
+      - "8080:80"
       - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
@@ -23,6 +24,7 @@ services:
       Redis__ConnectionString: cache:6379
       Jwt__SigningKey: ${JWT_SIGNING_KEY}
       Cors__AllowedOrigins__0: ${FRONTEND_ORIGIN:-http://localhost:5173}
+      Email__ConfirmationUrlBase: ${FRONTEND_ORIGIN:-http://localhost:5173}/confirm-email
     depends_on:
       db:
         condition: service_healthy
@@ -43,6 +45,8 @@ services:
       DOTNET_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
       ConnectionStrings__Db: Host=db;Database=${POSTGRES_DB:-planorama};Username=${POSTGRES_USER:-planorama};Password=${POSTGRES_PASSWORD}
       Redis__ConnectionString: cache:6379
+      Resend__ApiKey: ${RESEND_API_KEY}
+      Email__FromAddress: ${EMAIL_FROM_ADDRESS:-no-reply@planorama.app}
     depends_on:
       db:
         condition: service_healthy
