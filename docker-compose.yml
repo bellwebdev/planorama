@@ -25,6 +25,12 @@ services:
       Jwt__SigningKey: ${JWT_SIGNING_KEY}
       Cors__AllowedOrigins__0: ${FRONTEND_ORIGIN:-http://localhost:5173}
       Email__ConfirmationUrlBase: ${FRONTEND_ORIGIN:-http://localhost:5173}/confirm-email
+      Google__ClientId: ${GOOGLE_OAUTH_CLIENT_ID}
+      R2__AccountId: ${R2_ACCOUNT_ID}
+      R2__AccessKeyId: ${R2_ACCESS_KEY_ID}
+      R2__SecretAccessKey: ${R2_SECRET_ACCESS_KEY}
+      R2__BucketName: ${R2_BUCKET_NAME}
+      R2__PublicBaseUrl: ${R2_PUBLIC_BASE_URL}
     depends_on:
       db:
         condition: service_healthy

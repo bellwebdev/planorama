@@ -5,7 +5,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Planorama.Api.Auth;
 using Planorama.Core.Data;
+using Planorama.Core.Media;
 using Testcontainers.PostgreSql;
 using Xunit;
 
@@ -46,6 +48,7 @@ public class PlanoramaWebApplicationFactory : WebApplicationFactory<Program>, IA
                 ["Jwt:Audience"] = "planorama-tests",
                 ["Email:ConfirmationUrlBase"] = "https://app.test/confirm-email",
                 ["Cors:AllowedOrigins:0"] = "https://app.test",
+                ["Google:ClientId"] = "test-client-id",
             });
         });
 
@@ -53,6 +56,12 @@ public class PlanoramaWebApplicationFactory : WebApplicationFactory<Program>, IA
         {
             services.RemoveAll<IBackgroundJobClient>();
             services.AddScoped<IBackgroundJobClient, NoOpBackgroundJobClient>();
+
+            services.RemoveAll<IGoogleIdTokenValidator>();
+            services.AddScoped<IGoogleIdTokenValidator, FakeGoogleIdTokenValidator>();
+
+            services.RemoveAll<IAvatarStorage>();
+            services.AddScoped<IAvatarStorage, FakeAvatarStorage>();
         });
     }
 

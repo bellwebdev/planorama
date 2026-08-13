@@ -39,6 +39,13 @@ public static class DotEnvLoader
         {
             Environment.SetEnvironmentVariable("Jwt__SigningKey", signingKey);
         }
+
+        if (Environment.GetEnvironmentVariable("Google__ClientId") is null
+            && values.TryGetValue("GOOGLE_OAUTH_CLIENT_ID", out var googleClientId)
+            && !string.IsNullOrEmpty(googleClientId))
+        {
+            Environment.SetEnvironmentVariable("Google__ClientId", googleClientId);
+        }
     }
 
     private static Dictionary<string, string> Parse(string envFile)

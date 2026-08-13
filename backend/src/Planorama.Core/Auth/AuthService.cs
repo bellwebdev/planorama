@@ -164,6 +164,59 @@ public class AuthService(
         await db.SaveChangesAsync(ct);
     }
 
+    /// <inheritdoc/>
+    public async Task<LoginResult> ExternalLoginAsync(ExternalLoginIdentity identity, CancellationToken ct)
+    {
+        var user = await userManager.FindByLoginAsync(identity.Provider, identity.ProviderKey);
+
+        if (user is null)
+        {
+            if (!identity.EmailVerified)
+            {
+                throw new ExternalEmailNotVerifiedException();
+            }
+
+            user = await userManager.FindByEmailAsync(identity.Email);
+            if (user is null)
+            {
+                user = new AppUser
+                {
+                    UserName = identity.Email,
+                    Email = identity.Email,
+                    EmailConfirmed = true,
+                    DisplayName = identity.DisplayName ?? identity.Email.Split('@')[0],
+                    AvatarUrl = identity.AvatarUrl,
+                };
+
+                var createResult = await userManager.CreateAsync(user);
+                if (!createResult.Succeeded)
+                {
+                    // Benign double-submit race (two concurrent sign-ins for a brand-new email) —
+                    // the account now exists, so fall through to the linking path below rather than
+                    // treating this as a real registration conflict.
+                    user = await userManager.FindByEmailAsync(identity.Email)
+                        ?? throw new RegistrationFailedException(string.Join(" ", createResult.Errors.Select(e => e.Description)));
+                }
+            }
+
+            if (!user.EmailConfirmed)
+            {
+                user.EmailConfirmed = true;
+            }
+
+            if (user.AvatarUrl is null)
+            {
+                user.AvatarUrl = identity.AvatarUrl;
+            }
+
+            await userManager.AddLoginAsync(user, new UserLoginInfo(identity.Provider, identity.ProviderKey, identity.Provider));
+            await userManager.UpdateAsync(user);
+        }
+
+        var tokens = await IssueTokenPairAsync(user, Guid.NewGuid(), ct);
+        return new LoginResult(user.Id, user.Email!, user.DisplayName, tokens); // Email is non-null — see RegisterAsync.
+    }
+
     private async Task<TokenPair> IssueTokenPairAsync(AppUser user, Guid familyId, CancellationToken ct, RefreshToken? replacing = null)
     {
         var accessToken = accessTokenIssuer.Issue(user);

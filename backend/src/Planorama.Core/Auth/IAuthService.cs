@@ -36,4 +36,13 @@ public interface IAuthService
 
     /// <summary>Idempotent: an unknown or already-revoked token is a silent no-op, since logout is inherently a "make sure it's gone" operation.</summary>
     Task LogoutAsync(string refreshToken, CancellationToken ct);
+
+    /// <summary>
+    /// Signs in via a verified external identity: returns the existing linked account, links the
+    /// identity to an existing account with a matching email, or creates a new account — in that
+    /// order. A newly linked or created account has its email trusted as confirmed, since the
+    /// provider already verified it; no confirmation email is sent on this path.
+    /// </summary>
+    /// <exception cref="Exceptions.ExternalEmailNotVerifiedException">The provider has not verified this email, and no existing linked account was found.</exception>
+    Task<LoginResult> ExternalLoginAsync(ExternalLoginIdentity identity, CancellationToken ct);
 }
