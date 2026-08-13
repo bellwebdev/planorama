@@ -1,20 +1,28 @@
 using System.Text;
+using Amazon.Runtime;
+using Amazon.S3;
 using FluentValidation;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Planorama.Api.Auth;
 using Planorama.Api.Endpoints;
 using Planorama.Api.ErrorHandling;
 using Planorama.Api.Options;
+using Planorama.Api.Storage;
 using Planorama.Core.Auth;
 using Planorama.Core.Configuration;
 using Planorama.Core.Data;
 using Planorama.Core.Domain;
+using Planorama.Core.Media;
 using Planorama.Core.Options;
+using Planorama.Core.Profile;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -46,6 +54,8 @@ try
         .BindConfiguration(EmailOptions.SectionName);
     builder.Services.AddOptions<GoogleOptions>()
         .BindConfiguration(GoogleOptions.SectionName);
+    builder.Services.AddOptions<R2Options>()
+        .BindConfiguration(R2Options.SectionName);
 
     builder.Services.AddDbContext<PlanoramaDbContext>(options =>
         options.UseNpgsql(builder.Configuration.GetConnectionString("Db")));
@@ -81,13 +91,49 @@ try
     builder.Services.AddScoped<IAccessTokenIssuer, JwtAccessTokenIssuer>();
     builder.Services.AddScoped<IAuthService, AuthService>();
     builder.Services.AddScoped<IGoogleIdTokenValidator, GoogleIdTokenValidator>();
+    builder.Services.AddScoped<IImageProcessor, SkiaImageProcessor>();
+    builder.Services.AddScoped<IAvatarStorage, R2AvatarStorage>();
+    builder.Services.AddScoped<IProfileService, ProfileService>();
 
-    var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
+    // AWS SDK clients are documented thread-safe and expensive to construct — one shared instance.
+    builder.Services.AddSingleton<IAmazonS3>(sp =>
+    {
+        var r2 = sp.GetRequiredService<IOptions<R2Options>>().Value;
+        var config = new AmazonS3Config
+        {
+            ServiceURL = $"https://{r2.AccountId}.r2.cloudflarestorage.com",
+            ForcePathStyle = true,
+            AuthenticationRegion = "auto",
+            // AWSSDK.S3 v4's default trailing-checksum streaming mode
+            // (STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER) isn't implemented by R2 — fall back to
+            // the classic signing path, only computing/validating checksums when an operation
+            // actually requires one.
+            RequestChecksumCalculation = RequestChecksumCalculation.WHEN_REQUIRED,
+            ResponseChecksumValidation = ResponseChecksumValidation.WHEN_REQUIRED,
+        };
+        return new AmazonS3Client(r2.AccessKeyId, r2.SecretAccessKey, config);
+    });
+
+    // Defense-in-depth cap ~1MB above the app-level 5MB avatar check, so an oversized multipart
+    // body is rejected by the form reader before much of it is buffered.
+    builder.Services.Configure<FormOptions>(o => o.MultipartBodyLengthLimit = 6 * 1024 * 1024);
+
     builder.Services
         .AddAuthentication()
-        .AddJwtBearer(options =>
+        .AddJwtBearer();
+
+    // Configured via IOptions<JwtOptions>, resolved lazily at host-build time rather than read
+    // directly off builder.Configuration — WebApplicationFactory-based tests override config
+    // after this point in Program.cs runs, so an eager read here would see stale/empty values.
+    builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+        .Configure<IOptions<JwtOptions>>((bearerOptions, jwtOptions) =>
         {
-            options.TokenValidationParameters = new TokenValidationParameters
+            // Without this, the framework remaps the "sub" claim JwtAccessTokenIssuer sets to the
+            // legacy ClaimTypes.NameIdentifier URI on the way in, breaking ClaimsPrincipalExtensions.GetUserId().
+            bearerOptions.MapInboundClaims = false;
+
+            var jwt = jwtOptions.Value;
+            bearerOptions.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidIssuer = jwt.Issuer,
                 ValidAudience = jwt.Audience,
@@ -134,6 +180,7 @@ try
     var v1 = app.MapGroup("/api/v1");
     v1.MapGet("/meta", () => new ApiMeta("planorama", "v1"));
     v1.MapAuthEndpoints();
+    v1.MapMeEndpoints();
 
     app.Run();
 }

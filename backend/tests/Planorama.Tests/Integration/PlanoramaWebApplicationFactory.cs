@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Planorama.Api.Auth;
 using Planorama.Core.Data;
+using Planorama.Core.Media;
 using Testcontainers.PostgreSql;
 using Xunit;
 
@@ -58,6 +59,9 @@ public class PlanoramaWebApplicationFactory : WebApplicationFactory<Program>, IA
 
             services.RemoveAll<IGoogleIdTokenValidator>();
             services.AddScoped<IGoogleIdTokenValidator, FakeGoogleIdTokenValidator>();
+
+            services.RemoveAll<IAvatarStorage>();
+            services.AddScoped<IAvatarStorage, FakeAvatarStorage>();
         });
     }
 
