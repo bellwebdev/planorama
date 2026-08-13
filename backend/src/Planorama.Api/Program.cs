@@ -1,10 +1,11 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using Amazon.Runtime;
 using Amazon.S3;
 using FluentValidation;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Hangfire;
 using Hangfire.PostgreSql;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
@@ -23,6 +24,7 @@ using Planorama.Core.Domain;
 using Planorama.Core.Media;
 using Planorama.Core.Options;
 using Planorama.Core.Profile;
+using Planorama.Core.Settings;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -94,6 +96,11 @@ try
     builder.Services.AddScoped<IImageProcessor, SkiaImageProcessor>();
     builder.Services.AddScoped<IAvatarStorage, R2AvatarStorage>();
     builder.Services.AddScoped<IProfileService, ProfileService>();
+    builder.Services.AddScoped<ISettingsService, SettingsService>();
+
+    // First enum-backed DTO field to cross the API boundary — string names (not raw ints) for
+    // every future one too, so this only needs deciding once.
+    builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
     // AWS SDK clients are documented thread-safe and expensive to construct — one shared instance.
     builder.Services.AddSingleton<IAmazonS3>(sp =>
@@ -181,6 +188,7 @@ try
     v1.MapGet("/meta", () => new ApiMeta("planorama", "v1"));
     v1.MapAuthEndpoints();
     v1.MapMeEndpoints();
+    v1.MapMeSettingsEndpoints();
 
     app.Run();
 }
