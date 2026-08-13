@@ -1,3 +1,4 @@
+using Planorama.Api.Auth;
 using Planorama.Api.Contracts.Auth;
 using Planorama.Api.Filters;
 using Planorama.Core.Auth;
@@ -6,7 +7,7 @@ namespace Planorama.Api.Endpoints;
 
 public static class AuthEndpoints
 {
-    /// <summary>Maps the six <c>/auth/*</c> routes. All are anonymous by design — this is the credential bootstrap surface itself.</summary>
+    /// <summary>Maps the seven <c>/auth/*</c> routes. All are anonymous by design — this is the credential bootstrap surface itself.</summary>
     public static void MapAuthEndpoints(this RouteGroupBuilder v1)
     {
         var auth = v1.MapGroup("/auth").WithTags("Auth");
@@ -56,6 +57,17 @@ public static class AuthEndpoints
             })
             .AddEndpointFilter<ValidationFilter<ResendConfirmationRequest>>()
             .AddEndpointFilter(new IdempotencyFilter("auth/resend-confirmation"));
+
+        auth.MapPost("/external/google", async (GoogleSignInRequest request, IGoogleIdTokenValidator validator, IAuthService authService, CancellationToken ct) =>
+            {
+                var payload = await validator.ValidateAsync(request.IdToken, ct);
+                var identity = new ExternalLoginIdentity("Google", payload.Subject, payload.Email, payload.EmailVerified, payload.Name, payload.Picture);
+                var result = await authService.ExternalLoginAsync(identity, ct);
+                return Results.Ok(new LoginResponse(
+                    new UserSummary(result.UserId, result.Email, result.DisplayName),
+                    MapTokens(result.Tokens)));
+            })
+            .AddEndpointFilter<ValidationFilter<GoogleSignInRequest>>();
     }
 
     private static TokenPairResponse MapTokens(TokenPair tokens) =>

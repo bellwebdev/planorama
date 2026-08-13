@@ -44,6 +44,8 @@ try
         .BindConfiguration(CorsOptions.SectionName);
     builder.Services.AddOptions<EmailOptions>()
         .BindConfiguration(EmailOptions.SectionName);
+    builder.Services.AddOptions<GoogleOptions>()
+        .BindConfiguration(GoogleOptions.SectionName);
 
     builder.Services.AddDbContext<PlanoramaDbContext>(options =>
         options.UseNpgsql(builder.Configuration.GetConnectionString("Db")));
@@ -78,6 +80,7 @@ try
     builder.Services.AddValidatorsFromAssemblyContaining<Program>();
     builder.Services.AddScoped<IAccessTokenIssuer, JwtAccessTokenIssuer>();
     builder.Services.AddScoped<IAuthService, AuthService>();
+    builder.Services.AddScoped<IGoogleIdTokenValidator, GoogleIdTokenValidator>();
 
     var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
     builder.Services

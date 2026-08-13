@@ -180,7 +180,77 @@ public class AuthEndpointsTests(PlanoramaWebApplicationFactory factory) : IClass
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Google_signin_with_new_email_creates_confirmed_account()
+    {
+        var email = UniqueEmail();
+        var response = await GoogleSignInAsync($"{Guid.NewGuid():N}|{email}|true|Ada Lovelace");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var login = await response.Content.ReadFromJsonAsync<LoginResponse>();
+        Assert.NotNull(login);
+        Assert.Equal(email, login!.User.Email);
+
+        using var scope = factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
+        var user = await userManager.FindByIdAsync(login.User.Id.ToString());
+        Assert.True(user!.EmailConfirmed);
+    }
+
+    [Fact]
+    public async Task Google_signin_twice_with_same_subject_returns_same_user_id()
+    {
+        var token = $"{Guid.NewGuid():N}|{UniqueEmail()}|true|Ada Lovelace";
+
+        var first = await GoogleSignInAsync(token);
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        var firstLogin = await first.Content.ReadFromJsonAsync<LoginResponse>();
+
+        var second = await GoogleSignInAsync(token);
+        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+        var secondLogin = await second.Content.ReadFromJsonAsync<LoginResponse>();
+
+        Assert.Equal(firstLogin!.User.Id, secondLogin!.User.Id);
+        Assert.NotEqual(firstLogin.Tokens.RefreshToken, secondLogin.Tokens.RefreshToken);
+    }
+
+    [Fact]
+    public async Task Google_signin_links_to_existing_password_account_with_matching_email()
+    {
+        var email = UniqueEmail();
+        var passwordLogin = await RegisterConfirmAndLoginAsync(email);
+
+        var googleResponse = await GoogleSignInAsync($"{Guid.NewGuid():N}|{email}|true|Ada Lovelace");
+        Assert.Equal(HttpStatusCode.OK, googleResponse.StatusCode);
+        var googleLogin = await googleResponse.Content.ReadFromJsonAsync<LoginResponse>();
+
+        Assert.Equal(passwordLogin.User.Id, googleLogin!.User.Id);
+    }
+
+    [Fact]
+    public async Task Google_signin_with_unverified_email_returns_403()
+    {
+        var response = await GoogleSignInAsync($"{Guid.NewGuid():N}|{UniqueEmail()}|false");
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Google_signin_with_invalid_token_returns_401()
+    {
+        var response = await GoogleSignInAsync("invalid");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Google_signin_missing_id_token_returns_400_validation_problem()
+    {
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/external/google", new GoogleSignInRequest(""));
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     private static string UniqueEmail() => $"user-{Guid.NewGuid():N}@example.com";
+
+    private Task<HttpResponseMessage> GoogleSignInAsync(string fakeIdToken) =>
+        _client.PostAsJsonAsync("/api/v1/auth/external/google", new GoogleSignInRequest(fakeIdToken));
 
     private async Task<HttpResponseMessage> RegisterAsync(string email, string password, string displayName, string idempotencyKey)
     {
