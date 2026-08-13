@@ -51,8 +51,11 @@ services:
       DOTNET_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
       ConnectionStrings__Db: Host=db;Database=${POSTGRES_DB:-planorama};Username=${POSTGRES_USER:-planorama};Password=${POSTGRES_PASSWORD}
       Redis__ConnectionString: cache:6379
-      Resend__ApiKey: ${RESEND_API_KEY}
-      Email__FromAddress: ${EMAIL_FROM_ADDRESS:-no-reply@planorama.app}
+      Smtp__Host: ${SMTP_HOST}
+      Smtp__Port: ${SMTP_PORT:-587}
+      Smtp__Username: ${SMTP_USERNAME}
+      Smtp__Password: ${SMTP_PASSWORD}
+      Email__FromAddress: ${EMAIL_FROM_ADDRESS:-no-reply@planorama.family}
     depends_on:
       db:
         condition: service_healthy

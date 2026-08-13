@@ -1,0 +1,32 @@
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+  object-fit: cover;
+  user-select: none;
+}
+
+.initials {
+  color: var(--text-inverse);
+  font-weight: var(--font-weight-semibold);
+}
+
+.sm {
+  width: 1.75rem;
+  height: 1.75rem;
+  font-size: var(--font-size-caption);
+}
+
+.md {
+  width: 2.5rem;
+  height: 2.5rem;
+  font-size: var(--font-size-body);
+}
+
+.lg {
+  width: 4rem;
+  height: 4rem;
+  font-size: var(--font-size-h3);
+}

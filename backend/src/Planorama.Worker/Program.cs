@@ -40,7 +40,7 @@ try
     builder.Services.AddHangfireServer();
 
     builder.Services.AddOptions<EmailOptions>().BindConfiguration(EmailOptions.SectionName);
-    builder.Services.AddOptions<ResendOptions>().BindConfiguration(ResendOptions.SectionName);
+    builder.Services.AddOptions<SmtpOptions>().BindConfiguration(SmtpOptions.SectionName);
 
     if (builder.Environment.IsDevelopment())
     {
@@ -48,9 +48,7 @@ try
     }
     else
     {
-        var resendOptions = builder.Configuration.GetSection(ResendOptions.SectionName).Get<ResendOptions>() ?? new ResendOptions();
-        Resend.ResendDiExtensions.AddResend(builder.Services, options => options.ApiToken = resendOptions.ApiKey);
-        builder.Services.AddScoped<IEmailSender, ResendEmailSender>();
+        builder.Services.AddScoped<IEmailSender, MailKitSmtpEmailSender>();
     }
 
     builder.Services.AddScoped<IEmailDispatchJob, EmailDispatchJob>();

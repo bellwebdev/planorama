@@ -1,0 +1,18 @@
+.banner {
+  background: var(--feedback-error-bg);
+  border: 1px solid var(--feedback-error-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+
+.title {
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+  color: var(--feedback-error);
+}
+
+.detail {
+  font-size: var(--font-size-caption);
+  color: var(--feedback-error);
+  margin-top: var(--space-1);
+}

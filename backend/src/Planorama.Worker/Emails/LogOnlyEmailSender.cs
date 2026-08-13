@@ -4,8 +4,8 @@ using Planorama.Core.Integrations;
 namespace Planorama.Worker.Emails;
 
 /// <summary>
-/// Development-only IEmailSender: logs instead of calling Resend so `docker compose up`
-/// works locally without a live API key, and confirmation links can be read from logs.
+/// Development-only IEmailSender: logs instead of sending over SMTP so `docker compose up`
+/// works locally without live SMTP credentials, and confirmation links can be read from logs.
 /// </summary>
 public class LogOnlyEmailSender(ILogger<LogOnlyEmailSender> logger) : IEmailSender
 {

@@ -77,25 +77,32 @@ body {
 }
 
 h1 {
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-bold);
-  line-height: 1.2;
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.1;
 }
 
 h2 {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-bold);
-  line-height: 1.25;
+  font-family: var(--font-family-heading);
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.1;
 }
 
 h3 {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-medium);
-  line-height: 1.3;
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.2;
+}
+
+p {
+  font-size: var(--font-size-body);
+  line-height: 1.5;
 }
 
 a {
-  color: var(--brand-secondary);
+  color: var(--brand-primary);
 }
 `;
 

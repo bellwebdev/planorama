@@ -5,7 +5,7 @@ public class EmailOptions
 {
     public const string SectionName = "Email";
 
-    public string FromAddress { get; set; } = "no-reply@planorama.app";
+    public string FromAddress { get; set; } = "no-reply@planorama.family";
     public string FromName { get; set; } = "Planorama";
 
     /// <summary>Base URL the confirmation link is built against, e.g. "https://app.planorama.family/confirm-email".</summary>
