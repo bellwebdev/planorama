@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using Amazon.Runtime;
 using Amazon.S3;
 using FluentValidation;
@@ -7,8 +8,11 @@ using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -58,6 +62,19 @@ try
         .BindConfiguration(GoogleOptions.SectionName);
     builder.Services.AddOptions<R2Options>()
         .BindConfiguration(R2Options.SectionName);
+    builder.Services.AddOptions<TurnstileOptions>()
+        .BindConfiguration(TurnstileOptions.SectionName);
+
+    // The `api` container has no published port — only the `proxy` (Caddy) container can reach
+    // it on the compose network — so any single hop is safe to trust for X-Forwarded-For.
+    // Without this, RemoteIpAddress below always resolves to Caddy's container IP, collapsing
+    // every caller into one rate-limit bucket.
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.KnownNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
 
     builder.Services.AddDbContext<PlanoramaDbContext>(options =>
         options.UseNpgsql(builder.Configuration.GetConnectionString("Db")));
@@ -93,6 +110,7 @@ try
     builder.Services.AddScoped<IAccessTokenIssuer, JwtAccessTokenIssuer>();
     builder.Services.AddScoped<IAuthService, AuthService>();
     builder.Services.AddScoped<IGoogleIdTokenValidator, GoogleIdTokenValidator>();
+    builder.Services.AddHttpClient<ITurnstileVerifier, TurnstileVerifier>();
     builder.Services.AddScoped<IImageProcessor, SkiaImageProcessor>();
     builder.Services.AddScoped<IAvatarStorage, R2AvatarStorage>();
     builder.Services.AddScoped<IProfileService, ProfileService>();
@@ -152,6 +170,59 @@ try
         });
     builder.Services.AddAuthorization();
 
+    builder.Services.AddOptions<RateLimitOptions>()
+        .BindConfiguration(RateLimitOptions.SectionName);
+
+    // Per-IP throttling on the two anonymous endpoints that send email (abuse/cost surface, not
+    // brute-force credential guessing — login already has Identity's own lockout for that).
+    // Limits are resolved via IOptions from httpContext.RequestServices at request time, not read
+    // off builder.Configuration up front — WebApplicationFactory-based tests only merge their
+    // config overrides in during Build(), so an eager read here would see defaults, not overrides.
+    builder.Services.AddRateLimiter(options =>
+    {
+        options.OnRejected = async (context, ct) =>
+        {
+            context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+            var problemDetailsService = context.HttpContext.RequestServices.GetRequiredService<IProblemDetailsService>();
+            await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
+            {
+                HttpContext = context.HttpContext,
+                ProblemDetails = new ProblemDetails
+                {
+                    Status = StatusCodes.Status429TooManyRequests,
+                    Title = "Too many requests",
+                    Detail = "Please wait before trying again.",
+                },
+            });
+        };
+
+        options.AddPolicy("auth-register", httpContext =>
+        {
+            var policy = httpContext.RequestServices.GetRequiredService<IOptions<RateLimitOptions>>().Value.AuthRegister;
+            return RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = policy.PermitLimit,
+                    Window = TimeSpan.FromMinutes(policy.WindowMinutes),
+                    QueueLimit = 0,
+                });
+        });
+
+        options.AddPolicy("auth-resend-confirmation", httpContext =>
+        {
+            var policy = httpContext.RequestServices.GetRequiredService<IOptions<RateLimitOptions>>().Value.AuthResendConfirmation;
+            return RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = policy.PermitLimit,
+                    Window = TimeSpan.FromMinutes(policy.WindowMinutes),
+                    QueueLimit = 0,
+                });
+        });
+    });
+
     var cors = builder.Configuration.GetSection(CorsOptions.SectionName).Get<CorsOptions>() ?? new CorsOptions();
     builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
         .WithOrigins(cors.AllowedOrigins)
@@ -165,12 +236,14 @@ try
 
     var app = builder.Build();
 
+    app.UseForwardedHeaders();
     app.UseSerilogRequestLogging();
     app.UseExceptionHandler();
     app.UseStatusCodePages();
     app.UseCors();
     app.UseAuthentication();
     app.UseAuthorization();
+    app.UseRateLimiter();
 
     if (app.Environment.IsDevelopment())
     {

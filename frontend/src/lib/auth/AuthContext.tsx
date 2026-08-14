@@ -6,11 +6,11 @@ import { clearTokenState, getTokenState, setTokenState, subscribeToTokenState } 
 interface AuthContextValue {
   user: UserSummary | null;
   isAuthenticated: boolean;
-  register: (email: string, password: string, displayName: string) => Promise<void>;
+  register: (email: string, password: string, displayName: string, turnstileToken: string) => Promise<void>;
   confirmEmail: (userId: string, token: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: (idToken: string) => Promise<void>;
-  resendConfirmation: (email: string) => Promise<void>;
+  resendConfirmation: (email: string, turnstileToken: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -29,16 +29,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setTokenState({ accessToken: result.tokens.accessToken, refreshToken: result.tokens.refreshToken, user: result.user });
   }, []);
 
-  const register = useCallback(async (email: string, password: string, displayName: string) => {
-    await authApi.register(email, password, displayName);
+  const register = useCallback(async (email: string, password: string, displayName: string, turnstileToken: string) => {
+    await authApi.register(email, password, displayName, turnstileToken);
   }, []);
 
   const confirmEmail = useCallback(async (userId: string, token: string) => {
     await authApi.confirmEmail(userId, token);
   }, []);
 
-  const resendConfirmation = useCallback(async (email: string) => {
-    await authApi.resendConfirmation(email);
+  const resendConfirmation = useCallback(async (email: string, turnstileToken: string) => {
+    await authApi.resendConfirmation(email, turnstileToken);
   }, []);
 
   const logout = useCallback(async () => {

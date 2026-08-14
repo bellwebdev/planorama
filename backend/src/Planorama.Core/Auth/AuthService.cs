@@ -74,6 +74,16 @@ public class AuthService(
         var result = await userManager.ConfirmEmailAsync(user, token);
         if (!result.Succeeded)
         {
+            // A concurrent confirmation request (StrictMode double-fire, or an email client
+            // prescanning the link) can win the race and confirm the user out from under this
+            // call, which fails ConfirmEmailAsync on a concurrency-stamp mismatch rather than a
+            // bad token. Re-check before treating it as a genuinely invalid/expired token.
+            var refreshed = await userManager.FindByIdAsync(userId.ToString());
+            if (refreshed is { EmailConfirmed: true })
+            {
+                return;
+            }
+
             throw new InvalidTokenException();
         }
     }

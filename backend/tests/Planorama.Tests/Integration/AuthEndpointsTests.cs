@@ -73,7 +73,7 @@ public class AuthEndpointsTests(PlanoramaWebApplicationFactory factory)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/register")
         {
-            Content = JsonContent.Create(new RegisterRequest(AuthTestHelpers.UniqueEmail(), ValidPassword, "Ada")),
+            Content = JsonContent.Create(new RegisterRequest(AuthTestHelpers.UniqueEmail(), ValidPassword, "Ada", "turnstile-token")),
         };
         var response = await _client.SendAsync(request);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -173,7 +173,7 @@ public class AuthEndpointsTests(PlanoramaWebApplicationFactory factory)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/resend-confirmation")
         {
-            Content = JsonContent.Create(new ResendConfirmationRequest(AuthTestHelpers.UniqueEmail())),
+            Content = JsonContent.Create(new ResendConfirmationRequest(AuthTestHelpers.UniqueEmail(), "turnstile-token")),
         };
         request.Headers.Add("Idempotency-Key", Guid.NewGuid().ToString());
 

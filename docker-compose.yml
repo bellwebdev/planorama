@@ -26,6 +26,7 @@ services:
       Cors__AllowedOrigins__0: ${FRONTEND_ORIGIN:-http://localhost:5173}
       Email__ConfirmationUrlBase: ${FRONTEND_ORIGIN:-http://localhost:5173}/confirm-email
       Google__ClientId: ${GOOGLE_OAUTH_CLIENT_ID}
+      Turnstile__SecretKey: ${TURNSTILE_SECRET_KEY}
       R2__AccountId: ${R2_ACCOUNT_ID}
       R2__AccessKeyId: ${R2_ACCESS_KEY_ID}
       R2__SecretAccessKey: ${R2_SECRET_ACCESS_KEY}

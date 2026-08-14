@@ -6,6 +6,7 @@ import { ErrorBanner } from "../../components/ErrorBanner/ErrorBanner";
 import { TextField } from "../../components/TextField/TextField";
 import { ApiError } from "../../lib/api/client";
 import { useAuth } from "../../lib/auth/AuthContext";
+import { useTurnstile } from "../../lib/turnstile/useTurnstile";
 import styles from "./RegisterPage.module.css";
 
 // Mirrors backend/src/Planorama.Api/Validation/RegisterRequestValidator.cs for immediate
@@ -41,6 +42,8 @@ export function RegisterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
   const [resent, setResent] = useState(false);
+  const registerTurnstile = useTurnstile();
+  const resendTurnstile = useTurnstile();
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -54,9 +57,14 @@ export function RegisterPage() {
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
+    if (!registerTurnstile.token) {
+      setApiError(new Error("Please complete the verification challenge."));
+      return;
+    }
+
     setSubmitting(true);
     try {
-      await register(email, password, displayName.trim());
+      await register(email, password, displayName.trim(), registerTurnstile.token);
       setRegisteredEmail(email);
     } catch (error) {
       if (error instanceof ApiError) {
@@ -64,18 +72,21 @@ export function RegisterPage() {
       }
       setApiError(error);
     } finally {
+      registerTurnstile.reset();
       setSubmitting(false);
     }
   }
 
   async function handleResend() {
-    if (!registeredEmail) return;
+    if (!registeredEmail || !resendTurnstile.token) return;
     setApiError(null);
     try {
-      await resendConfirmation(registeredEmail);
+      await resendConfirmation(registeredEmail, resendTurnstile.token);
       setResent(true);
     } catch (error) {
       setApiError(error);
+    } finally {
+      resendTurnstile.reset();
     }
   }
 
@@ -86,9 +97,12 @@ export function RegisterPage() {
         {resent ? (
           <p className={styles.hint}>Sent again — check your inbox.</p>
         ) : (
-          <Button variant="secondary" fullWidth onClick={() => void handleResend()}>
-            Resend confirmation email
-          </Button>
+          <>
+            <div ref={resendTurnstile.containerRef} />
+            <Button variant="secondary" fullWidth disabled={!resendTurnstile.token} onClick={() => void handleResend()}>
+              Resend confirmation email
+            </Button>
+          </>
         )}
         <Link to="/login" className={styles.link}>
           Back to sign in
@@ -136,7 +150,8 @@ export function RegisterPage() {
           autoComplete="new-password"
           required
         />
-        <Button type="submit" fullWidth disabled={submitting}>
+        <div ref={registerTurnstile.containerRef} />
+        <Button type="submit" fullWidth disabled={submitting || !registerTurnstile.token}>
           {submitting ? "Creating account…" : "Create account"}
         </Button>
       </form>

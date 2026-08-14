@@ -1,3 +1,3 @@
 namespace Planorama.Api.Contracts.Auth;
 
-public record ResendConfirmationRequest(string Email);
+public record ResendConfirmationRequest(string Email, string TurnstileToken);

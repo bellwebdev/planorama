@@ -21,5 +21,7 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
             .Matches(@"[^a-zA-Z0-9]").WithMessage("Password must contain a non-alphanumeric character.");
 
         RuleFor(x => x.DisplayName).NotEmpty().MaximumLength(100);
+
+        RuleFor(x => x.TurnstileToken).NotEmpty();
     }
 }

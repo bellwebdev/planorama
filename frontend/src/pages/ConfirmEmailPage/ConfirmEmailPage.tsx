@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { AuthLayout } from "../../components/AuthLayout/AuthLayout";
 import { Button } from "../../components/Button/Button";
 import { ErrorBanner } from "../../components/ErrorBanner/ErrorBanner";
 import { TextField } from "../../components/TextField/TextField";
 import { useAuth } from "../../lib/auth/AuthContext";
+import { useTurnstile } from "../../lib/turnstile/useTurnstile";
 import styles from "./ConfirmEmailPage.module.css";
 
 type Status = "confirming" | "success" | "error";
@@ -16,8 +17,13 @@ export function ConfirmEmailPage() {
   const [error, setError] = useState<unknown>(null);
   const [resendEmail, setResendEmail] = useState("");
   const [resent, setResent] = useState(false);
+  const hasAttempted = useRef(false);
+  const resendTurnstile = useTurnstile();
 
   useEffect(() => {
+    if (hasAttempted.current) return;
+    hasAttempted.current = true;
+
     const userId = searchParams.get("userId");
     const token = searchParams.get("token");
     if (!userId || !token) {
@@ -35,13 +41,15 @@ export function ConfirmEmailPage() {
   }, []);
 
   async function handleResend() {
-    if (!resendEmail.trim()) return;
+    if (!resendEmail.trim() || !resendTurnstile.token) return;
     setError(null);
     try {
-      await resendConfirmation(resendEmail.trim());
+      await resendConfirmation(resendEmail.trim(), resendTurnstile.token);
       setResent(true);
     } catch (err) {
       setError(err);
+    } finally {
+      resendTurnstile.reset();
     }
   }
 
@@ -79,7 +87,8 @@ export function ConfirmEmailPage() {
               autoComplete="email"
               required
             />
-            <Button fullWidth onClick={() => void handleResend()}>
+            <div ref={resendTurnstile.containerRef} />
+            <Button fullWidth disabled={!resendTurnstile.token} onClick={() => void handleResend()}>
               Resend confirmation email
             </Button>
           </>

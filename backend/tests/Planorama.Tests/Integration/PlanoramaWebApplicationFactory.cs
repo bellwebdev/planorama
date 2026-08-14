@@ -49,6 +49,12 @@ public class PlanoramaWebApplicationFactory : WebApplicationFactory<Program>, IA
                 ["Email:ConfirmationUrlBase"] = "https://app.test/confirm-email",
                 ["Cors:AllowedOrigins:0"] = "https://app.test",
                 ["Google:ClientId"] = "test-client-id",
+                // Well above anything a shared test run could hit — these buckets exist to catch
+                // real abuse, not to be exercised by the test suite's own repeated register calls.
+                ["RateLimiting:AuthRegister:PermitLimit"] = "10000",
+                ["RateLimiting:AuthRegister:WindowMinutes"] = "15",
+                ["RateLimiting:AuthResendConfirmation:PermitLimit"] = "10000",
+                ["RateLimiting:AuthResendConfirmation:WindowMinutes"] = "15",
             });
         });
 
@@ -59,6 +65,9 @@ public class PlanoramaWebApplicationFactory : WebApplicationFactory<Program>, IA
 
             services.RemoveAll<IGoogleIdTokenValidator>();
             services.AddScoped<IGoogleIdTokenValidator, FakeGoogleIdTokenValidator>();
+
+            services.RemoveAll<ITurnstileVerifier>();
+            services.AddScoped<ITurnstileVerifier, FakeTurnstileVerifier>();
 
             services.RemoveAll<IAvatarStorage>();
             services.AddScoped<IAvatarStorage, FakeAvatarStorage>();

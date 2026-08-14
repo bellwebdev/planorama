@@ -12,13 +12,15 @@ public static class AuthEndpoints
     {
         var auth = v1.MapGroup("/auth").WithTags("Auth");
 
-        auth.MapPost("/register", async (RegisterRequest request, IAuthService authService, CancellationToken ct) =>
+        auth.MapPost("/register", async (RegisterRequest request, IAuthService authService, ITurnstileVerifier turnstile, HttpContext httpContext, CancellationToken ct) =>
             {
+                await turnstile.VerifyAsync(request.TurnstileToken, httpContext.Connection.RemoteIpAddress?.ToString(), ct);
                 var result = await authService.RegisterAsync(request.Email, request.Password, request.DisplayName, ct);
                 return Results.Created($"/api/v1/users/{result.UserId}", new RegisterResponse(result.UserId, result.Email));
             })
             .AddEndpointFilter<ValidationFilter<RegisterRequest>>()
-            .AddEndpointFilter(new IdempotencyFilter("auth/register"));
+            .AddEndpointFilter(new IdempotencyFilter("auth/register"))
+            .RequireRateLimiting("auth-register");
 
         auth.MapPost("/confirm-email", async (ConfirmEmailRequest request, IAuthService authService, CancellationToken ct) =>
             {
@@ -50,13 +52,15 @@ public static class AuthEndpoints
             })
             .AddEndpointFilter<ValidationFilter<LogoutRequest>>();
 
-        auth.MapPost("/resend-confirmation", async (ResendConfirmationRequest request, IAuthService authService, CancellationToken ct) =>
+        auth.MapPost("/resend-confirmation", async (ResendConfirmationRequest request, IAuthService authService, ITurnstileVerifier turnstile, HttpContext httpContext, CancellationToken ct) =>
             {
+                await turnstile.VerifyAsync(request.TurnstileToken, httpContext.Connection.RemoteIpAddress?.ToString(), ct);
                 await authService.ResendConfirmationAsync(request.Email, ct);
                 return Results.Accepted();
             })
             .AddEndpointFilter<ValidationFilter<ResendConfirmationRequest>>()
-            .AddEndpointFilter(new IdempotencyFilter("auth/resend-confirmation"));
+            .AddEndpointFilter(new IdempotencyFilter("auth/resend-confirmation"))
+            .RequireRateLimiting("auth-resend-confirmation");
 
         auth.MapPost("/external/google", async (GoogleSignInRequest request, IGoogleIdTokenValidator validator, IAuthService authService, CancellationToken ct) =>
             {

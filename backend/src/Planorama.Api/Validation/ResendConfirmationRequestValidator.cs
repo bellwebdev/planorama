@@ -8,5 +8,7 @@ public class ResendConfirmationRequestValidator : AbstractValidator<ResendConfir
     public ResendConfirmationRequestValidator()
     {
         RuleFor(x => x.Email).NotEmpty().EmailAddress();
+
+        RuleFor(x => x.TurnstileToken).NotEmpty();
     }
 }

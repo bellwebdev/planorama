@@ -17,7 +17,7 @@ public static class AuthTestHelpers
     {
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/register")
         {
-            Content = JsonContent.Create(new RegisterRequest(email, password, displayName)),
+            Content = JsonContent.Create(new RegisterRequest(email, password, displayName, "turnstile-token")),
         };
         request.Headers.Add("Idempotency-Key", idempotencyKey);
         return await client.SendAsync(request);

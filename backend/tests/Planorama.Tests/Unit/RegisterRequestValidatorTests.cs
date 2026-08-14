@@ -11,7 +11,7 @@ public class RegisterRequestValidatorTests
     [Fact]
     public void Valid_request_passes()
     {
-        var result = _validator.Validate(new RegisterRequest("ada@example.com", "Passw0rd!23", "Ada"));
+        var result = _validator.Validate(new RegisterRequest("ada@example.com", "Passw0rd!23", "Ada", "turnstile-token"));
 
         Assert.True(result.IsValid);
     }
@@ -24,7 +24,7 @@ public class RegisterRequestValidatorTests
     [InlineData("NoSpecialChar123")] // no non-alphanumeric
     public void Weak_password_fails(string password)
     {
-        var result = _validator.Validate(new RegisterRequest("ada@example.com", password, "Ada"));
+        var result = _validator.Validate(new RegisterRequest("ada@example.com", password, "Ada", "turnstile-token"));
 
         Assert.False(result.IsValid);
     }
@@ -34,7 +34,7 @@ public class RegisterRequestValidatorTests
     [InlineData("not-an-email")]
     public void Invalid_email_fails(string email)
     {
-        var result = _validator.Validate(new RegisterRequest(email, "Passw0rd!23", "Ada"));
+        var result = _validator.Validate(new RegisterRequest(email, "Passw0rd!23", "Ada", "turnstile-token"));
 
         Assert.False(result.IsValid);
     }
@@ -42,7 +42,15 @@ public class RegisterRequestValidatorTests
     [Fact]
     public void Empty_display_name_fails()
     {
-        var result = _validator.Validate(new RegisterRequest("ada@example.com", "Passw0rd!23", ""));
+        var result = _validator.Validate(new RegisterRequest("ada@example.com", "Passw0rd!23", "", "turnstile-token"));
+
+        Assert.False(result.IsValid);
+    }
+
+    [Fact]
+    public void Empty_turnstile_token_fails()
+    {
+        var result = _validator.Validate(new RegisterRequest("ada@example.com", "Passw0rd!23", "Ada", ""));
 
         Assert.False(result.IsValid);
     }

@@ -1,11 +1,11 @@
 import type { LoginResponse, RegisterResponse, TokenPairResponse } from "../../types/api";
 import { apiRequest } from "./client";
 
-export function register(email: string, password: string, displayName: string) {
+export function register(email: string, password: string, displayName: string, turnstileToken: string) {
   return apiRequest<RegisterResponse>("/auth/register", {
     method: "POST",
     auth: false,
-    body: { email, password, displayName },
+    body: { email, password, displayName, turnstileToken },
     headers: { "Idempotency-Key": crypto.randomUUID() },
   });
 }
@@ -30,11 +30,11 @@ export function logout(refreshToken: string) {
   return apiRequest<void>("/auth/logout", { method: "POST", auth: false, body: { refreshToken } });
 }
 
-export function resendConfirmation(email: string) {
+export function resendConfirmation(email: string, turnstileToken: string) {
   return apiRequest<void>("/auth/resend-confirmation", {
     method: "POST",
     auth: false,
-    body: { email },
+    body: { email, turnstileToken },
     headers: { "Idempotency-Key": crypto.randomUUID() },
   });
 }
