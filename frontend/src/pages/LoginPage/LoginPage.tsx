@@ -7,6 +7,7 @@ import { TextField } from "../../components/TextField/TextField";
 import { ApiError } from "../../lib/api/client";
 import { useAuth } from "../../lib/auth/AuthContext";
 import { useGoogleSignIn } from "../../lib/google/useGoogleSignIn";
+import { useTurnstile } from "../../lib/turnstile/useTurnstile";
 import styles from "./LoginPage.module.css";
 
 export function LoginPage() {
@@ -17,6 +18,7 @@ export function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [resent, setResent] = useState(false);
+  const resendTurnstile = useTurnstile();
 
   const handleGoogleCredential = useCallback(
     (idToken: string) => {
@@ -45,28 +47,42 @@ export function LoginPage() {
   }
 
   async function handleResend() {
-    if (!email.trim()) return;
+    if (!email.trim() || !resendTurnstile.token) return;
     try {
-      await resendConfirmation(email.trim());
+      await resendConfirmation(email.trim(), resendTurnstile.token);
       setResent(true);
     } catch (err) {
       setError(err);
+    } finally {
+      resendTurnstile.reset();
     }
   }
 
-  const isUnconfirmedEmail = error instanceof ApiError && error.title === "Email not confirmed";
+  const isUnconfirmedEmail =
+    error instanceof ApiError && error.title === "Email not confirmed";
 
   return (
     <AuthLayout title="Sign in" subtitle="Welcome back to Planorama.">
-      <form className={styles.form} onSubmit={(event) => void handleSubmit(event)}>
+      <form
+        className={styles.form}
+        onSubmit={(event) => void handleSubmit(event)}
+      >
         <ErrorBanner error={error} />
         {isUnconfirmedEmail &&
           (resent ? (
             <p className={styles.hint}>Confirmation email sent again.</p>
           ) : (
-            <Button variant="secondary" fullWidth onClick={() => void handleResend()}>
-              Resend confirmation email
-            </Button>
+            <>
+              <div ref={resendTurnstile.containerRef} />
+              <Button
+                variant="secondary"
+                fullWidth
+                disabled={!resendTurnstile.token}
+                onClick={() => void handleResend()}
+              >
+                Resend confirmation email
+              </Button>
+            </>
           ))}
         <TextField
           label="Email"
