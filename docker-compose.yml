@@ -25,6 +25,7 @@ services:
       Jwt__SigningKey: ${JWT_SIGNING_KEY}
       Cors__AllowedOrigins__0: ${FRONTEND_ORIGIN:-http://localhost:5173}
       Email__ConfirmationUrlBase: ${FRONTEND_ORIGIN:-http://localhost:5173}/confirm-email
+      Email__InviteUrlBase: ${FRONTEND_ORIGIN:-http://localhost:5173}/invites/accept
       Google__ClientId: ${GOOGLE_OAUTH_CLIENT_ID}
       Turnstile__SecretKey: ${TURNSTILE_SECRET_KEY}
       R2__AccountId: ${R2_ACCOUNT_ID}

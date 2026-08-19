@@ -25,7 +25,7 @@ export function AppShell() {
             </NavLink>
           </nav>
           <div className={styles.actions}>
-            {user && <Avatar name={user.displayName} size="sm" />}
+            {user && <Avatar name={user.displayName} src={user.avatarUrl} size="sm" />}
             <Button variant="tertiary" onClick={() => void logout()}>
               Log out
             </Button>

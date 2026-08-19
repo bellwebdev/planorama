@@ -24,4 +24,18 @@ public class EmailDispatchJob(IEmailSender emailSender) : IEmailDispatchJob
         var message = new EmailMessage(toEmail, "Confirm your Planorama account", html, text);
         return emailSender.SendAsync(message, CancellationToken.None); // No request-scoped token exists inside a background job.
     }
+
+    /// <inheritdoc/>
+    public Task SendTripInviteAsync(string toEmail, string tripName, string acceptUrl)
+    {
+        var html = $"""
+            <p>You've been invited to join <strong>{tripName}</strong> on Planorama.</p>
+            <p><a href="{acceptUrl}">View the trip</a></p>
+            <p>If you don't have a Planorama account yet, you'll be asked to create one first.</p>
+            """;
+        var text = $"You've been invited to join {tripName} on Planorama: {acceptUrl}\n\nIf you don't have a Planorama account yet, you'll be asked to create one first.";
+
+        var message = new EmailMessage(toEmail, $"You're invited to {tripName}", html, text);
+        return emailSender.SendAsync(message, CancellationToken.None); // No request-scoped token exists inside a background job.
+    }
 }

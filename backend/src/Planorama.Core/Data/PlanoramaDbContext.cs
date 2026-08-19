@@ -13,6 +13,9 @@ public class PlanoramaDbContext(DbContextOptions<PlanoramaDbContext> options)
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<IdempotencyKey> IdempotencyKeys => Set<IdempotencyKey>();
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
+    public DbSet<Trip> Trips => Set<Trip>();
+    public DbSet<TripMember> TripMembers => Set<TripMember>();
+    public DbSet<Invitation> Invitations => Set<Invitation>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -53,6 +56,48 @@ public class PlanoramaDbContext(DbContextOptions<PlanoramaDbContext> options)
         builder.Entity<IdempotencyKey>(key =>
         {
             key.HasKey(k => new { k.Endpoint, k.Key });
+        });
+
+        builder.Entity<Trip>(trip =>
+        {
+            trip.Property(t => t.Name).HasMaxLength(200).IsRequired();
+            trip.Property(t => t.LocationName).HasMaxLength(200).IsRequired();
+            trip.Property(t => t.StayAddress).HasMaxLength(300).IsRequired();
+            trip.Property(t => t.Timezone).HasMaxLength(100).IsRequired();
+            trip.Property(t => t.Status).HasConversion(TripStatusConverter.Instance).HasMaxLength(20);
+            trip.HasOne<AppUser>()
+                .WithMany()
+                .HasForeignKey(t => t.CreatorId)
+                .OnDelete(DeleteBehavior.Restrict);
+            trip.HasIndex(t => t.CreatorId);
+        });
+
+        builder.Entity<TripMember>(member =>
+        {
+            member.HasKey(m => new { m.TripId, m.UserId });
+            member.Property(m => m.Role).HasConversion(TripMemberRoleConverter.Instance).HasMaxLength(10);
+            member.Property(m => m.Status).HasConversion(TripMemberStatusConverter.Instance).HasMaxLength(10);
+            member.Property(m => m.InvitedVia).HasConversion(NullableInvitedViaConverter.Instance).HasMaxLength(10);
+            member.HasOne(m => m.Trip)
+                .WithMany(t => t.Members)
+                .HasForeignKey(m => m.TripId)
+                .OnDelete(DeleteBehavior.Cascade);
+            member.HasOne<AppUser>()
+                .WithMany()
+                .HasForeignKey(m => m.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            member.HasIndex(m => m.UserId);
+        });
+
+        builder.Entity<Invitation>(invitation =>
+        {
+            invitation.Property(i => i.InvitedVia).HasConversion(InvitedViaConverter.Instance).HasMaxLength(10);
+            invitation.Property(i => i.Contact).HasMaxLength(320);
+            invitation.HasIndex(i => i.Token).IsUnique();
+            invitation.HasOne(i => i.Trip)
+                .WithMany()
+                .HasForeignKey(i => i.TripId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

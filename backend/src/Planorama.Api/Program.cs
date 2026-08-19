@@ -29,6 +29,7 @@ using Planorama.Core.Media;
 using Planorama.Core.Options;
 using Planorama.Core.Profile;
 using Planorama.Core.Settings;
+using Planorama.Core.Trips;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -115,6 +116,8 @@ try
     builder.Services.AddScoped<IAvatarStorage, R2AvatarStorage>();
     builder.Services.AddScoped<IProfileService, ProfileService>();
     builder.Services.AddScoped<ISettingsService, SettingsService>();
+    builder.Services.AddScoped<ITripService, TripService>();
+    builder.Services.AddScoped<IInviteService, InviteService>();
 
     // First enum-backed DTO field to cross the API boundary — string names (not raw ints) for
     // every future one too, so this only needs deciding once.
@@ -262,6 +265,8 @@ try
     v1.MapAuthEndpoints();
     v1.MapMeEndpoints();
     v1.MapMeSettingsEndpoints();
+    v1.MapTripEndpoints();
+    v1.MapInviteEndpoints();
 
     app.Run();
 }

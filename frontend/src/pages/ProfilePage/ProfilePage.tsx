@@ -67,7 +67,10 @@ export function ProfilePage() {
     setUploading(true);
     meApi
       .uploadAvatar(file)
-      .then((updated) => setProfile(updated))
+      .then((updated) => {
+        setProfile(updated);
+        updateUser({ avatarUrl: updated.avatarUrl });
+      })
       .catch((error: unknown) => setAvatarError(error))
       .finally(() => {
         setUploading(false);
