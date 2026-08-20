@@ -114,6 +114,10 @@
   gap: var(--space-3);
 }
 
+.suggestRow {
+  display: flex;
+}
+
 .detailHeader h3 {
   font-family: var(--font-family-heading);
   font-size: var(--font-size-body-lg);

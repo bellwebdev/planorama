@@ -4,6 +4,7 @@ import { Button } from "../../components/Button/Button";
 import { Card } from "../../components/Card/Card";
 import { ErrorBanner } from "../../components/ErrorBanner/ErrorBanner";
 import { PlaceSearchPanel } from "../../components/PlaceSearchPanel/PlaceSearchPanel";
+import { SuggestionsPanel } from "../../components/SuggestionsPanel/SuggestionsPanel";
 import { TextField } from "../../components/TextField/TextField";
 import { TripForm } from "../../components/TripForm/TripForm";
 import * as tripsApi from "../../lib/api/trips";
@@ -31,6 +32,7 @@ export function TripDetailPage() {
 
   const [trip, setTrip] = useState<TripResponse | null>(null);
   const [loadError, setLoadError] = useState<unknown>(null);
+  const [suggestionsRefreshKey, setSuggestionsRefreshKey] = useState(0);
 
   const [editing, setEditing] = useState(false);
   const [values, setValues] = useState<TripFormValues | null>(null);
@@ -191,7 +193,16 @@ export function TripDetailPage() {
 
       <Card className={styles.card}>
         <h2 className={styles.sectionTitle}>Find places nearby</h2>
-        <PlaceSearchPanel tripId={trip.id} stayNotGeocoded={trip.stayLat === null || trip.stayLng === null} />
+        <PlaceSearchPanel
+          tripId={trip.id}
+          stayNotGeocoded={trip.stayLat === null || trip.stayLng === null}
+          onSuggestionCreated={() => setSuggestionsRefreshKey((k) => k + 1)}
+        />
+      </Card>
+
+      <Card className={styles.card}>
+        <h2 className={styles.sectionTitle}>Suggestions</h2>
+        <SuggestionsPanel tripId={trip.id} refreshKey={suggestionsRefreshKey} />
       </Card>
 
       {isCreator && (

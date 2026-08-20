@@ -1,0 +1,166 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.hint {
+  font-size: var(--font-size-body);
+  color: var(--text-muted);
+}
+
+.toolbar {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--surface-bg);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.formRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.formRow > * {
+  flex: 1;
+  min-width: 9rem;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--surface-raised);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.cardTitle {
+  font-size: var(--font-size-body-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-default);
+}
+
+.cardAddress {
+  font-size: var(--font-size-caption);
+  color: var(--text-muted);
+}
+
+.cardDescription {
+  font-size: var(--font-size-body);
+  color: var(--text-default);
+}
+
+.statusBadge {
+  flex-shrink: 0;
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-full);
+  padding: 0.125rem var(--space-3);
+  white-space: nowrap;
+}
+
+.statusVoting {
+  color: var(--status-voting);
+  background: color-mix(in srgb, var(--status-voting) 12%, transparent);
+}
+
+.statusApproved {
+  color: var(--status-approved);
+  background: color-mix(in srgb, var(--status-approved) 12%, transparent);
+}
+
+.statusDiscarded,
+.statusExpired {
+  color: var(--status-discarded);
+  background: color-mix(in srgb, var(--status-discarded) 12%, transparent);
+}
+
+.cardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  font-size: var(--font-size-caption);
+  color: var(--text-muted);
+}
+
+.voteRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.closesAt {
+  font-size: var(--font-size-caption);
+  color: var(--text-muted);
+}
+
+.closedHint {
+  font-size: var(--font-size-caption);
+  color: var(--text-muted);
+}
+
+.tally {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  background: var(--surface-bg);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+}
+
+.tallyCount {
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-default);
+}
+
+.voteList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: var(--font-size-caption);
+  color: var(--text-muted);
+}
+
+.hiddenHint {
+  font-size: var(--font-size-caption);
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+@media (min-width: 640px) {
+  .formRow > * {
+    flex: 1 1 0;
+  }
+}

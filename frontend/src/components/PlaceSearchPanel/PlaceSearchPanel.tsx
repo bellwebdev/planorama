@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import * as placesApi from "../../lib/api/places";
+import * as suggestionsApi from "../../lib/api/suggestions";
 import { ApiError } from "../../lib/api/client";
 import { formatDistance, formatDuration } from "../../lib/places/formatDistance";
 import { useDebouncedValue } from "../../lib/places/useDebouncedValue";
@@ -27,9 +28,11 @@ interface PlaceSearchPanelProps {
   tripId: string;
   /** The trip's stay address hasn't been resolved to a coordinate yet — search can't run. */
   stayNotGeocoded: boolean;
+  /** Notified after a place is turned into a suggestion, so a sibling suggestions list can refresh. */
+  onSuggestionCreated?: () => void;
 }
 
-export function PlaceSearchPanel({ tripId, stayNotGeocoded }: PlaceSearchPanelProps) {
+export function PlaceSearchPanel({ tripId, stayNotGeocoded, onSuggestionCreated }: PlaceSearchPanelProps) {
   const [categories, setCategories] = useState<PlaceCategoryResponse[]>([]);
   const [category, setCategory] = useState<PlaceCategory | null>(null);
   const [radius, setRadius] = useState(RADIUS_OPTIONS[1].meters);
@@ -152,7 +155,14 @@ export function PlaceSearchPanel({ tripId, stayNotGeocoded }: PlaceSearchPanelPr
         ))}
       </ul>
 
-      {selected && <PlaceDetailPanel tripId={tripId} place={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <PlaceDetailPanel
+          tripId={tripId}
+          place={selected}
+          onClose={() => setSelected(null)}
+          onSuggestionCreated={onSuggestionCreated}
+        />
+      )}
     </div>
   );
 }
@@ -161,9 +171,10 @@ interface PlaceDetailPanelProps {
   tripId: string;
   place: PlaceResponse;
   onClose: () => void;
+  onSuggestionCreated?: () => void;
 }
 
-function PlaceDetailPanel({ tripId, place, onClose }: PlaceDetailPanelProps) {
+function PlaceDetailPanel({ tripId, place, onClose, onSuggestionCreated }: PlaceDetailPanelProps) {
   const [detail, setDetail] = useState<PlaceDetailResponse | null>(null);
   const [detailError, setDetailError] = useState<unknown>(null);
 
@@ -171,6 +182,24 @@ function PlaceDetailPanel({ tripId, place, onClose }: PlaceDetailPanelProps) {
   const [route, setRoute] = useState<RouteResponse | null>(null);
   const [routeError, setRouteError] = useState<unknown>(null);
   const [routing, setRouting] = useState(false);
+
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggested, setSuggested] = useState(false);
+  const [suggestError, setSuggestError] = useState<unknown>(null);
+
+  async function handleSuggest() {
+    setSuggesting(true);
+    setSuggestError(null);
+    try {
+      await suggestionsApi.createSuggestion(tripId, { providerPlaceId: place.providerPlaceId });
+      setSuggested(true);
+      onSuggestionCreated?.();
+    } catch (err) {
+      setSuggestError(err);
+    } finally {
+      setSuggesting(false);
+    }
+  }
 
   useEffect(() => {
     setDetail(null);
@@ -200,6 +229,13 @@ function PlaceDetailPanel({ tripId, place, onClose }: PlaceDetailPanelProps) {
           Close
         </Button>
       </div>
+
+      <div className={styles.suggestRow}>
+        <Button onClick={() => void handleSuggest()} disabled={suggesting || suggested}>
+          {suggested ? "Added to suggestions" : suggesting ? "Adding…" : "Suggest this place"}
+        </Button>
+      </div>
+      <ErrorBanner error={suggestError} />
 
       <ErrorBanner error={detailError} />
       {detail?.description && <p className={styles.detailDescription}>{detail.description}</p>}

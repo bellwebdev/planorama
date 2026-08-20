@@ -154,3 +154,62 @@ export interface RouteResponse {
   /** Raw GeoJSON geometry (typically a LineString), ready to hand to a map layer. */
   geometry: string | null;
 }
+
+// Mirrors backend/src/Planorama.Api/Contracts/Suggestions/*.cs 1:1.
+
+export type SuggestionSource = "Custom" | "Geoapify";
+export type SuggestionStatus = "Voting" | "Approved" | "Discarded" | "Expired";
+export type SuggestionResolution = "Majority" | "CoinFlip" | "NoQuorum" | "Manual";
+export type VoteValue = "Yes" | "No";
+
+export interface VoteResponse {
+  userId: string;
+  displayName: string;
+  value: VoteValue;
+  castAt: string;
+}
+
+/** yesCount/noCount/votes are null until the requesting member has cast their own vote — the API
+ * withholds them server-side (spec §6.3), not the UI. */
+export interface SuggestionResponse {
+  id: string;
+  tripId: string;
+  suggestedById: string;
+  suggestedByName: string;
+  source: SuggestionSource;
+  providerPlaceId: string | null;
+  title: string;
+  description: string | null;
+  lat: number | null;
+  lng: number | null;
+  address: string | null;
+  externalRating: number | null;
+  proposedDate: string | null;
+  proposedStartTime: string | null;
+  durationMinutes: number | null;
+  votingClosesAt: string;
+  status: SuggestionStatus;
+  resolution: SuggestionResolution | null;
+  resolvedAt: string | null;
+  createdAt: string;
+  hasVoted: boolean;
+  yourVote: VoteValue | null;
+  yesCount: number | null;
+  noCount: number | null;
+  votes: VoteResponse[] | null;
+}
+
+export interface CreateSuggestionRequest {
+  providerPlaceId?: string | null;
+  title?: string | null;
+  description?: string | null;
+  address?: string | null;
+  proposedDate?: string | null;
+  proposedStartTime?: string | null;
+  durationMinutes?: number | null;
+  votingClosesAt?: string | null;
+}
+
+export interface CastVoteRequest {
+  value: VoteValue;
+}
