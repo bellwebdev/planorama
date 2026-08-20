@@ -114,7 +114,7 @@ public class AuthService(
         }
 
         var tokens = await IssueTokenPairAsync(user, Guid.NewGuid(), ct);
-        return new LoginResult(user.Id, user.Email!, user.DisplayName, tokens); // Email is non-null — see RegisterAsync.
+        return new LoginResult(user.Id, user.Email!, user.DisplayName, user.AvatarUrl, tokens); // Email is non-null — see RegisterAsync.
     }
 
     /// <inheritdoc/>
@@ -224,7 +224,7 @@ public class AuthService(
         }
 
         var tokens = await IssueTokenPairAsync(user, Guid.NewGuid(), ct);
-        return new LoginResult(user.Id, user.Email!, user.DisplayName, tokens); // Email is non-null — see RegisterAsync.
+        return new LoginResult(user.Id, user.Email!, user.DisplayName, user.AvatarUrl, tokens); // Email is non-null — see RegisterAsync.
     }
 
     private async Task<TokenPair> IssueTokenPairAsync(AppUser user, Guid familyId, CancellationToken ct, RefreshToken? replacing = null)

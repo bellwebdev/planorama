@@ -6,7 +6,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Planorama.Api.Auth;
+using Planorama.Core.Caching;
 using Planorama.Core.Data;
+using Planorama.Core.Integrations;
 using Planorama.Core.Media;
 using Testcontainers.PostgreSql;
 using Xunit;
@@ -49,6 +51,8 @@ public class PlanoramaWebApplicationFactory : WebApplicationFactory<Program>, IA
                 ["Email:ConfirmationUrlBase"] = "https://app.test/confirm-email",
                 ["Cors:AllowedOrigins:0"] = "https://app.test",
                 ["Google:ClientId"] = "test-client-id",
+                // Satisfies the ValidateOnStart check; every outbound Geoapify call is faked below.
+                ["Geoapify:ApiKey"] = "test-api-key",
                 // Well above anything a shared test run could hit — these buckets exist to catch
                 // real abuse, not to be exercised by the test suite's own repeated register calls.
                 ["RateLimiting:AuthRegister:PermitLimit"] = "10000",
@@ -71,6 +75,23 @@ public class PlanoramaWebApplicationFactory : WebApplicationFactory<Program>, IA
 
             services.RemoveAll<IAvatarStorage>();
             services.AddScoped<IAvatarStorage, FakeAvatarStorage>();
+
+            // Swapped at the interface the services consume, which is the cached decorator — the
+            // caching and quota rules are unit-tested against ProviderCallGate instead, so these
+            // tests stay about authorisation, binding and mapping.
+            services.RemoveAll<IPlacesProvider>();
+            services.AddScoped<IPlacesProvider, FakePlacesProvider>();
+
+            services.RemoveAll<IRoutingProvider>();
+            services.AddScoped<IRoutingProvider, FakeRoutingProvider>();
+
+            // Singleton, not scoped: tests resolve this same instance from the factory afterwards
+            // to assert on FakeGeocodingProvider.ReceivedAddresses.
+            services.RemoveAll<IGeocodingProvider>();
+            services.AddSingleton<IGeocodingProvider, FakeGeocodingProvider>();
+
+            services.RemoveAll<ICacheStore>();
+            services.AddSingleton<ICacheStore, InMemoryCacheStore>();
         });
     }
 

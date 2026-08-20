@@ -33,7 +33,7 @@ public static class AuthEndpoints
             {
                 var result = await authService.LoginAsync(request.Email, request.Password, ct);
                 return Results.Ok(new LoginResponse(
-                    new UserSummary(result.UserId, result.Email, result.DisplayName),
+                    new UserSummary(result.UserId, result.Email, result.DisplayName, result.AvatarUrl),
                     MapTokens(result.Tokens)));
             })
             .AddEndpointFilter<ValidationFilter<LoginRequest>>();
@@ -68,7 +68,7 @@ public static class AuthEndpoints
                 var identity = new ExternalLoginIdentity("Google", payload.Subject, payload.Email, payload.EmailVerified, payload.Name, payload.Picture);
                 var result = await authService.ExternalLoginAsync(identity, ct);
                 return Results.Ok(new LoginResponse(
-                    new UserSummary(result.UserId, result.Email, result.DisplayName),
+                    new UserSummary(result.UserId, result.Email, result.DisplayName, result.AvatarUrl),
                     MapTokens(result.Tokens)));
             })
             .AddEndpointFilter<ValidationFilter<GoogleSignInRequest>>();

@@ -1,0 +1,92 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.status {
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  color: var(--brand-primary);
+  background: color-mix(in srgb, var(--brand-primary) 10%, transparent);
+  border-radius: var(--radius-full);
+  padding: 0.125rem var(--space-3);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.hint {
+  font-size: var(--font-size-body);
+  color: var(--text-muted);
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.meta > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.meta dt {
+  font-size: var(--font-size-caption);
+  color: var(--text-muted);
+}
+
+.meta dd {
+  font-size: var(--font-size-body);
+  color: var(--text-default);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.sectionTitle {
+  font-size: var(--font-size-body-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-default);
+}
+
+.inviteRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.inviteRow > *:first-child {
+  flex: 1;
+  min-width: 12rem;
+}
+
+.inviteResult {
+  background: var(--surface-bg);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  font-size: var(--font-size-caption);
+  color: var(--text-default);
+}
+
+.inviteLink {
+  font-family: var(--font-family-mono);
+  word-break: break-all;
+}

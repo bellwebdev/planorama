@@ -1,0 +1,10 @@
+.hint {
+  font-size: var(--font-size-body);
+  color: var(--text-muted);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}

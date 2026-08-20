@@ -10,4 +10,7 @@ public class EmailOptions
 
     /// <summary>Base URL the confirmation link is built against, e.g. "https://app.planorama.family/confirm-email".</summary>
     public string ConfirmationUrlBase { get; set; } = string.Empty;
+
+    /// <summary>Base URL a trip invite accept link is built against, e.g. "https://app.planorama.family/invites/accept".</summary>
+    public string InviteUrlBase { get; set; } = string.Empty;
 }

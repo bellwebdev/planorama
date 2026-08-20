@@ -17,6 +17,9 @@ export function AppShell() {
         <div className={styles.headerInner}>
           <span className={styles.logo}>Planorama</span>
           <nav className={styles.nav}>
+            <NavLink to="/trips" className={navLinkClassName}>
+              Trips
+            </NavLink>
             <NavLink to="/profile" className={navLinkClassName}>
               Profile
             </NavLink>
@@ -25,7 +28,7 @@ export function AppShell() {
             </NavLink>
           </nav>
           <div className={styles.actions}>
-            {user && <Avatar name={user.displayName} size="sm" />}
+            {user && <Avatar name={user.displayName} src={user.avatarUrl} size="sm" />}
             <Button variant="tertiary" onClick={() => void logout()}>
               Log out
             </Button>

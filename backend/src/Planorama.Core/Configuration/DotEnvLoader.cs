@@ -12,6 +12,9 @@ public static class DotEnvLoader
     /// <summary>Local Postgres port mapped by docker-compose.yml (5432 is taken locally on this machine).</summary>
     private const int LocalDbPort = 5434;
 
+    /// <summary>Local Redis port mapped by docker-compose.yml, offset for the same reason as <see cref="LocalDbPort"/>.</summary>
+    private const int LocalCachePort = 6380;
+
     public static void ApplyLocalDevDefaults(string startDirectory)
     {
         var envFile = FindUpward(startDirectory, ".env");
@@ -33,18 +36,27 @@ public static class DotEnvLoader
                 $"Host=localhost;Port={LocalDbPort};Database={db};Username={user};Password={password}");
         }
 
-        if (Environment.GetEnvironmentVariable("Jwt__SigningKey") is null
-            && values.TryGetValue("JWT_SIGNING_KEY", out var signingKey)
-            && !string.IsNullOrEmpty(signingKey))
-        {
-            Environment.SetEnvironmentVariable("Jwt__SigningKey", signingKey);
-        }
+        Apply(values, "JWT_SIGNING_KEY", "Jwt__SigningKey");
+        Apply(values, "GOOGLE_OAUTH_CLIENT_ID", "Google__ClientId");
+        Apply(values, "GEOAPIFY_API_KEY", "Geoapify__ApiKey");
 
-        if (Environment.GetEnvironmentVariable("Google__ClientId") is null
-            && values.TryGetValue("GOOGLE_OAUTH_CLIENT_ID", out var googleClientId)
-            && !string.IsNullOrEmpty(googleClientId))
+        // Docker publishes the cache on a non-default host port; without this a locally-run API
+        // would try 6379 and silently run uncached.
+        if (Environment.GetEnvironmentVariable("Redis__ConnectionString") is null)
         {
-            Environment.SetEnvironmentVariable("Google__ClientId", googleClientId);
+            Environment.SetEnvironmentVariable("Redis__ConnectionString", $"localhost:{LocalCachePort}");
+        }
+    }
+
+    /// <summary>Copies one .env entry into its configuration-shaped environment variable, leaving
+    /// an already-set variable alone so Docker and CI always win over the local file.</summary>
+    private static void Apply(Dictionary<string, string> values, string envKey, string configKey)
+    {
+        if (Environment.GetEnvironmentVariable(configKey) is null
+            && values.TryGetValue(envKey, out var value)
+            && !string.IsNullOrEmpty(value))
+        {
+            Environment.SetEnvironmentVariable(configKey, value);
         }
     }
 

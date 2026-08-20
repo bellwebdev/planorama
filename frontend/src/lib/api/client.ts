@@ -26,6 +26,7 @@ interface RequestOptions {
   headers?: Record<string, string>;
   /** Attach the access token and allow refresh-on-401. Default true; auth endpoints pass false. */
   auth?: boolean;
+  signal?: AbortSignal;
 }
 
 interface ProblemPayload {
@@ -67,7 +68,7 @@ function rawRequest(path: string, options: RequestOptions): Promise<Response> {
     }
   }
 
-  return fetch(`${API_BASE}${path}`, { method: options.method ?? "GET", headers, body });
+  return fetch(`${API_BASE}${path}`, { method: options.method ?? "GET", headers, body, signal: options.signal });
 }
 
 let refreshPromise: Promise<boolean> | null = null;

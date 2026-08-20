@@ -17,19 +17,27 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Planorama.Api.Auth;
+using Planorama.Api.Caching;
 using Planorama.Api.Endpoints;
 using Planorama.Api.ErrorHandling;
 using Planorama.Api.Options;
+using Planorama.Api.Places;
 using Planorama.Api.Storage;
 using Planorama.Core.Auth;
 using Planorama.Core.Configuration;
+using Planorama.Core.Caching;
 using Planorama.Core.Data;
 using Planorama.Core.Domain;
+using Planorama.Core.Integrations;
 using Planorama.Core.Media;
 using Planorama.Core.Options;
+using Planorama.Core.Places;
 using Planorama.Core.Profile;
+using Planorama.Core.Suggestions;
 using Planorama.Core.Settings;
+using Planorama.Core.Trips;
 using Serilog;
+using StackExchange.Redis;
 
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
@@ -64,6 +72,13 @@ try
         .BindConfiguration(R2Options.SectionName);
     builder.Services.AddOptions<TurnstileOptions>()
         .BindConfiguration(TurnstileOptions.SectionName);
+    builder.Services.AddOptions<RedisOptions>()
+        .BindConfiguration(RedisOptions.SectionName);
+    builder.Services.AddOptions<GeoapifyOptions>()
+        .BindConfiguration(GeoapifyOptions.SectionName)
+        .Validate(o => !string.IsNullOrWhiteSpace(o.ApiKey), "Geoapify:ApiKey is required (set via Geoapify__ApiKey)")
+        .Validate(o => o.SoftCapFraction is > 0 and <= 1, "Geoapify:SoftCapFraction must be between 0 and 1")
+        .ValidateOnStart();
 
     // The `api` container has no published port — only the `proxy` (Caddy) container can reach
     // it on the compose network — so any single hop is safe to trust for X-Forwarded-For.
@@ -115,6 +130,40 @@ try
     builder.Services.AddScoped<IAvatarStorage, R2AvatarStorage>();
     builder.Services.AddScoped<IProfileService, ProfileService>();
     builder.Services.AddScoped<ISettingsService, SettingsService>();
+    builder.Services.AddScoped<ITripService, TripService>();
+    builder.Services.AddScoped<IInviteService, InviteService>();
+    builder.Services.AddScoped<IPlaceService, PlaceService>();
+    builder.Services.AddScoped<ISuggestionService, SuggestionService>();
+
+    // Injected rather than calling DateTimeOffset.UtcNow inside the service, so voting-window
+    // and window-closed behaviour is testable without waiting out a real clock.
+    builder.Services.AddSingleton(TimeProvider.System);
+
+    // AbortOnConnectFail=false so a cache that is slow to start (or briefly down) doesn't take the
+    // API down with it — RedisCacheStore already degrades to "no cache" on every failed operation.
+    builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+    {
+        var redis = sp.GetRequiredService<IOptions<RedisOptions>>().Value;
+        ConfigurationOptions config = ConfigurationOptions.Parse(redis.ConnectionString);
+        config.AbortOnConnectFail = false;
+        return ConnectionMultiplexer.Connect(config);
+    });
+    builder.Services.AddSingleton<ICacheStore, RedisCacheStore>();
+    builder.Services.AddScoped<IProviderQuotaGuard, GeoapifyQuotaGuard>();
+    builder.Services.AddScoped<IProviderCallGate, ProviderCallGate>();
+
+    // Adapters are registered as themselves and wrapped in their cache/quota decorators here, so
+    // the interface every consumer resolves is always the cached one — there is no way to
+    // accidentally inject a raw provider and bypass the free-tier protection.
+    builder.Services.AddHttpClient<GeoapifyPlacesProvider>(ConfigureGeoapifyClient);
+    builder.Services.AddHttpClient<GeoapifyRoutingProvider>(ConfigureGeoapifyClient);
+    builder.Services.AddHttpClient<GeoapifyGeocodingProvider>(ConfigureGeoapifyClient);
+    builder.Services.AddScoped<IPlacesProvider>(sp => new CachingPlacesProvider(
+        GeoapifyProviderKey, sp.GetRequiredService<GeoapifyPlacesProvider>(), sp.GetRequiredService<IProviderCallGate>()));
+    builder.Services.AddScoped<IRoutingProvider>(sp => new CachingRoutingProvider(
+        GeoapifyProviderKey, sp.GetRequiredService<GeoapifyRoutingProvider>(), sp.GetRequiredService<IProviderCallGate>()));
+    builder.Services.AddScoped<IGeocodingProvider>(sp => new CachingGeocodingProvider(
+        GeoapifyProviderKey, sp.GetRequiredService<GeoapifyGeocodingProvider>(), sp.GetRequiredService<IProviderCallGate>()));
 
     // First enum-backed DTO field to cross the API boundary — string names (not raw ints) for
     // every future one too, so this only needs deciding once.
@@ -262,6 +311,10 @@ try
     v1.MapAuthEndpoints();
     v1.MapMeEndpoints();
     v1.MapMeSettingsEndpoints();
+    v1.MapTripEndpoints();
+    v1.MapInviteEndpoints();
+    v1.MapPlaceEndpoints();
+    v1.MapSuggestionEndpoints();
 
     app.Run();
 }
@@ -276,6 +329,15 @@ finally
 }
 
 public record ApiMeta(string Name, string Version);
+
+public partial class Program
+{
+    /// <summary>Cache-key namespace for the current place/routing provider.</summary>
+    private const string GeoapifyProviderKey = "geoapify";
+
+    private static void ConfigureGeoapifyClient(IServiceProvider services, HttpClient client) =>
+        client.Timeout = TimeSpan.FromSeconds(services.GetRequiredService<IOptions<GeoapifyOptions>>().Value.TimeoutSeconds);
+}
 
 // Exposed for WebApplicationFactory-based integration tests.
 public partial class Program;
