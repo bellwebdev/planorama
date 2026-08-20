@@ -12,6 +12,9 @@ public static class AuthenticatedRequests
     public static Task<HttpResponseMessage> AuthenticatedPatchAsync<T>(this HttpClient client, string url, string accessToken, T body) =>
         client.SendAsync(Authenticated(new HttpRequestMessage(HttpMethod.Patch, url) { Content = JsonContent.Create(body) }, accessToken));
 
+    public static Task<HttpResponseMessage> AuthenticatedPutAsync<T>(this HttpClient client, string url, string accessToken, T body) =>
+        client.SendAsync(Authenticated(new HttpRequestMessage(HttpMethod.Put, url) { Content = JsonContent.Create(body) }, accessToken));
+
     public static Task<HttpResponseMessage> AuthenticatedPostAsync(this HttpClient client, string url, string accessToken) =>
         client.SendAsync(Authenticated(new HttpRequestMessage(HttpMethod.Post, url), accessToken));
 

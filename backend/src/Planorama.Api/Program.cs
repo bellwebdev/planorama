@@ -33,6 +33,7 @@ using Planorama.Core.Media;
 using Planorama.Core.Options;
 using Planorama.Core.Places;
 using Planorama.Core.Profile;
+using Planorama.Core.Suggestions;
 using Planorama.Core.Settings;
 using Planorama.Core.Trips;
 using Serilog;
@@ -132,6 +133,11 @@ try
     builder.Services.AddScoped<ITripService, TripService>();
     builder.Services.AddScoped<IInviteService, InviteService>();
     builder.Services.AddScoped<IPlaceService, PlaceService>();
+    builder.Services.AddScoped<ISuggestionService, SuggestionService>();
+
+    // Injected rather than calling DateTimeOffset.UtcNow inside the service, so voting-window
+    // and window-closed behaviour is testable without waiting out a real clock.
+    builder.Services.AddSingleton(TimeProvider.System);
 
     // AbortOnConnectFail=false so a cache that is slow to start (or briefly down) doesn't take the
     // API down with it — RedisCacheStore already degrades to "no cache" on every failed operation.
@@ -308,6 +314,7 @@ try
     v1.MapTripEndpoints();
     v1.MapInviteEndpoints();
     v1.MapPlaceEndpoints();
+    v1.MapSuggestionEndpoints();
 
     app.Run();
 }

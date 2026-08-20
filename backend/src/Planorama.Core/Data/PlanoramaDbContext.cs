@@ -15,6 +15,8 @@ public class PlanoramaDbContext(DbContextOptions<PlanoramaDbContext> options)
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
     public DbSet<Trip> Trips => Set<Trip>();
     public DbSet<TripMember> TripMembers => Set<TripMember>();
+    public DbSet<Suggestion> Suggestions => Set<Suggestion>();
+    public DbSet<Vote> Votes => Set<Vote>();
     public DbSet<Invitation> Invitations => Set<Invitation>();
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -87,6 +89,43 @@ public class PlanoramaDbContext(DbContextOptions<PlanoramaDbContext> options)
                 .HasForeignKey(m => m.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
             member.HasIndex(m => m.UserId);
+        });
+
+        builder.Entity<Suggestion>(suggestion =>
+        {
+            suggestion.Property(s => s.Title).HasMaxLength(200).IsRequired();
+            suggestion.Property(s => s.Address).HasMaxLength(300);
+            suggestion.Property(s => s.ProviderPlaceId).HasMaxLength(200);
+            suggestion.Property(s => s.ExternalRating).HasPrecision(3, 2);
+            suggestion.Property(s => s.Source).HasConversion(SuggestionSourceConverter.Instance).HasMaxLength(20);
+            suggestion.Property(s => s.Status).HasConversion(SuggestionStatusConverter.Instance).HasMaxLength(20);
+            suggestion.Property(s => s.Resolution).HasConversion(NullableSuggestionResolutionConverter.Instance).HasMaxLength(20);
+            suggestion.HasOne(s => s.Trip)
+                .WithMany()
+                .HasForeignKey(s => s.TripId)
+                .OnDelete(DeleteBehavior.Cascade);
+            suggestion.HasOne(s => s.SuggestedBy)
+                .WithMany()
+                .HasForeignKey(s => s.SuggestedById)
+                .OnDelete(DeleteBehavior.Restrict);
+            suggestion.HasIndex(s => s.TripId);
+            // The Phase 2 worker sweeps for suggestions whose window has closed.
+            suggestion.HasIndex(s => new { s.Status, s.VotingClosesAt });
+        });
+
+        builder.Entity<Vote>(vote =>
+        {
+            // One row per member per suggestion — a changed vote updates this row, never appends.
+            vote.HasKey(v => new { v.SuggestionId, v.UserId });
+            vote.Property(v => v.Value).HasConversion(VoteValueConverter.Instance).HasMaxLength(10);
+            vote.HasOne(v => v.Suggestion)
+                .WithMany(s => s.Votes)
+                .HasForeignKey(v => v.SuggestionId)
+                .OnDelete(DeleteBehavior.Cascade);
+            vote.HasOne(v => v.User)
+                .WithMany()
+                .HasForeignKey(v => v.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         builder.Entity<Invitation>(invitation =>
