@@ -85,8 +85,10 @@ public class PlanoramaWebApplicationFactory : WebApplicationFactory<Program>, IA
             services.RemoveAll<IRoutingProvider>();
             services.AddScoped<IRoutingProvider, FakeRoutingProvider>();
 
+            // Singleton, not scoped: tests resolve this same instance from the factory afterwards
+            // to assert on FakeGeocodingProvider.ReceivedAddresses.
             services.RemoveAll<IGeocodingProvider>();
-            services.AddScoped<IGeocodingProvider, FakeGeocodingProvider>();
+            services.AddSingleton<IGeocodingProvider, FakeGeocodingProvider>();
 
             services.RemoveAll<ICacheStore>();
             services.AddSingleton<ICacheStore, InMemoryCacheStore>();

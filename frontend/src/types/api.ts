@@ -52,7 +52,11 @@ export interface TripResponse {
   name: string;
   description: string | null;
   locationName: string;
+  locationLat: number | null;
+  locationLng: number | null;
   stayAddress: string;
+  stayLat: number | null;
+  stayLng: number | null;
   startDate: string;
   endDate: string;
   timezone: string;
@@ -94,4 +98,59 @@ export interface InviteResponse {
 export interface CreateInviteRequest {
   via: InvitedVia;
   contact?: string | null;
+}
+
+// Mirrors backend/src/Planorama.Api/Contracts/Places/*.cs 1:1.
+
+export type PlaceCategory =
+  | "Restaurant"
+  | "Cafe"
+  | "Museum"
+  | "Attraction"
+  | "Sights"
+  | "Park"
+  | "Playground"
+  | "Beach"
+  | "Zoo"
+  | "ThemePark"
+  | "Shopping"
+  | "Nature";
+
+export type TravelMode = "Drive" | "Walk" | "Bicycle" | "Transit";
+
+export interface PlaceCategoryResponse {
+  value: PlaceCategory;
+  label: string;
+}
+
+export interface PlaceResponse {
+  providerPlaceId: string;
+  name: string;
+  lat: number;
+  lng: number;
+  category: PlaceCategory;
+  address: string | null;
+  distanceMeters: number | null;
+  /** Always null — the current provider (Geoapify) carries no rating score. */
+  rating: number | null;
+}
+
+export interface PlaceDetailResponse {
+  providerPlaceId: string;
+  name: string;
+  lat: number;
+  lng: number;
+  category: PlaceCategory | null;
+  address: string | null;
+  description: string | null;
+  website: string | null;
+  rating: number | null;
+}
+
+export interface RouteResponse {
+  distanceMeters: number;
+  durationSeconds: number;
+  mode: TravelMode;
+  /** Raw GeoJSON geometry (typically a LineString), ready to hand to a map layer. */
+  geometry: string | null;
 }

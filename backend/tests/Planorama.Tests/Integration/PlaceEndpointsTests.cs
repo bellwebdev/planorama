@@ -2,8 +2,10 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.DependencyInjection;
 using Planorama.Api.Contracts.Places;
 using Planorama.Api.Contracts.Trips;
+using Planorama.Core.Integrations;
 using Planorama.Core.Places;
 using Xunit;
 
@@ -170,6 +172,35 @@ public class PlaceEndpointsTests(PlanoramaWebApplicationFactory factory)
 
         Assert.Equal(FakeGeocodingProvider.Latitude, trip.StayLat);
         Assert.Equal(FakeGeocodingProvider.Longitude, trip.StayLng);
+    }
+
+    [Fact]
+    public async Task Creating_a_trip_geocodes_the_stay_address_with_the_destination_for_context()
+    {
+        var geocoder = (FakeGeocodingProvider)factory.Services.GetRequiredService<IGeocodingProvider>();
+        var login = await AuthTestHelpers.RegisterConfirmAndLoginAsync(_client, factory, AuthTestHelpers.UniqueEmail());
+
+        await CreateTripAsync(login.Tokens.AccessToken, stayAddress: "113A 81st Street");
+
+        // A bare street address is ambiguous across cities — it must be geocoded together with
+        // the trip's destination, not on its own, or it resolves to the wrong city entirely.
+        Assert.Contains("113A 81st Street, Lake Tahoe", geocoder.ReceivedAddresses);
+    }
+
+    [Fact]
+    public async Task Updating_only_the_destination_re_geocodes_the_stay_point()
+    {
+        var geocoder = (FakeGeocodingProvider)factory.Services.GetRequiredService<IGeocodingProvider>();
+        var login = await AuthTestHelpers.RegisterConfirmAndLoginAsync(_client, factory, AuthTestHelpers.UniqueEmail());
+        TripResponse trip = await CreateTripAsync(login.Tokens.AccessToken, stayAddress: "113A 81st Street");
+        geocoder.ReceivedAddresses.Clear();
+
+        var update = new UpdateTripRequest(
+            trip.Name, trip.Description, "Sea Isle City, NJ", trip.StayAddress,
+            trip.StartDate, trip.EndDate, trip.Timezone, trip.DefaultVotingWindowHours, trip.Status);
+        await _client.AuthenticatedPatchAsync($"/api/v1/trips/{trip.Id}", login.Tokens.AccessToken, update);
+
+        Assert.Contains("113A 81st Street, Sea Isle City, NJ", geocoder.ReceivedAddresses);
     }
 
     private async Task<TripResponse> CreateTripAsync(string accessToken, string stayAddress = "123 Shore Rd")

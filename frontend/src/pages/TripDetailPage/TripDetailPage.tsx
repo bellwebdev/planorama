@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { Button } from "../../components/Button/Button";
 import { Card } from "../../components/Card/Card";
 import { ErrorBanner } from "../../components/ErrorBanner/ErrorBanner";
+import { PlaceSearchPanel } from "../../components/PlaceSearchPanel/PlaceSearchPanel";
 import { TextField } from "../../components/TextField/TextField";
 import { TripForm } from "../../components/TripForm/TripForm";
 import * as tripsApi from "../../lib/api/trips";
@@ -186,6 +187,11 @@ export function TripDetailPage() {
             {isCreator && <Button onClick={startEditing}>Edit trip</Button>}
           </>
         )}
+      </Card>
+
+      <Card className={styles.card}>
+        <h2 className={styles.sectionTitle}>Find places nearby</h2>
+        <PlaceSearchPanel tripId={trip.id} stayNotGeocoded={trip.stayLat === null || trip.stayLng === null} />
       </Card>
 
       {isCreator && (

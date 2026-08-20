@@ -94,7 +94,9 @@ public class TripService(PlanoramaDbContext db, IGeocodingProvider geocoder, ILo
         trip.Timezone = timezone;
         trip.DefaultVotingWindowHours = defaultVotingWindowHours;
         trip.Status = status;
-        await ApplyGeocodingAsync(trip, locationChanged, stayChanged, ct);
+        // The stay geocode is disambiguated using LocationName (see ApplyGeocodingAsync), so a
+        // destination change alone must re-resolve the stay point even if its own text didn't change.
+        await ApplyGeocodingAsync(trip, locationChanged, stayChanged || locationChanged, ct);
 
         await db.SaveChangesAsync(ct);
         return TripResult.FromEntity(trip);
@@ -116,7 +118,10 @@ public class TripService(PlanoramaDbContext db, IGeocodingProvider geocoder, ILo
     {
         if (geocodeStay)
         {
-            GeocodeResult? stay = await TryGeocodeAsync(trip.StayAddress, ct);
+            // The stay address alone is frequently ambiguous (e.g. "113A 81st Street" matches
+            // streets in dozens of cities) — appending the trip's destination disambiguates it
+            // the same way a person addressing an envelope would.
+            GeocodeResult? stay = await TryGeocodeAsync($"{trip.StayAddress}, {trip.LocationName}", ct);
             trip.StayLat = stay?.Location.Latitude;
             trip.StayLng = stay?.Location.Longitude;
         }
