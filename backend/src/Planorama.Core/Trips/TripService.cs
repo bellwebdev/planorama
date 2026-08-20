@@ -1,12 +1,14 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Planorama.Core.Data;
 using Planorama.Core.Domain;
 using Planorama.Core.Exceptions;
+using Planorama.Core.Integrations;
 
 namespace Planorama.Core.Trips;
 
 /// <inheritdoc cref="ITripService"/>
-public class TripService(PlanoramaDbContext db) : ITripService
+public class TripService(PlanoramaDbContext db, IGeocodingProvider geocoder, ILogger<TripService> logger) : ITripService
 {
     /// <inheritdoc/>
     public async Task<TripResult> CreateAsync(
@@ -26,6 +28,8 @@ public class TripService(PlanoramaDbContext db) : ITripService
             Timezone = timezone,
             DefaultVotingWindowHours = defaultVotingWindowHours,
         };
+        await ApplyGeocodingAsync(trip, geocodeLocation: true, geocodeStay: true, ct);
+
         db.Trips.Add(trip);
         db.TripMembers.Add(new TripMember
         {
@@ -54,7 +58,11 @@ public class TripService(PlanoramaDbContext db) : ITripService
                 m.Trip.Name,
                 m.Trip.Description,
                 m.Trip.LocationName,
+                m.Trip.LocationLat,
+                m.Trip.LocationLng,
                 m.Trip.StayAddress,
+                m.Trip.StayLat,
+                m.Trip.StayLng,
                 m.Trip.StartDate,
                 m.Trip.EndDate,
                 m.Trip.Timezone,
@@ -74,6 +82,9 @@ public class TripService(PlanoramaDbContext db) : ITripService
             throw new ForbiddenException();
         }
 
+        bool locationChanged = !string.Equals(trip.LocationName, locationName, StringComparison.Ordinal);
+        bool stayChanged = !string.Equals(trip.StayAddress, stayAddress, StringComparison.Ordinal);
+
         trip.Name = name;
         trip.Description = description;
         trip.LocationName = locationName;
@@ -83,6 +94,8 @@ public class TripService(PlanoramaDbContext db) : ITripService
         trip.Timezone = timezone;
         trip.DefaultVotingWindowHours = defaultVotingWindowHours;
         trip.Status = status;
+        await ApplyGeocodingAsync(trip, locationChanged, stayChanged, ct);
+
         await db.SaveChangesAsync(ct);
         return TripResult.FromEntity(trip);
     }
@@ -91,7 +104,50 @@ public class TripService(PlanoramaDbContext db) : ITripService
     /// into the same not-found outcome, so neither leaks a trip's existence to a non-member.</summary>
     private async Task<Trip> GetAccessibleTripAsync(Guid tripId, Guid userId, CancellationToken ct) =>
         await db.Trips
-            .Where(t => t.Id == tripId && t.Members.Any(m => m.UserId == userId && m.Status == TripMemberStatus.Accepted))
+            .AccessibleBy(userId)
+            .Where(t => t.Id == tripId)
             .FirstOrDefaultAsync(ct)
         ?? throw new TripNotFoundException();
+
+    /// <summary>Resolves the trip's free-text addresses to coordinates, which places search and
+    /// routing need as their origin. Only the fields whose text actually changed are re-resolved,
+    /// so an unrelated edit (renaming the trip) doesn't spend provider credits.</summary>
+    private async Task ApplyGeocodingAsync(Trip trip, bool geocodeLocation, bool geocodeStay, CancellationToken ct)
+    {
+        if (geocodeStay)
+        {
+            GeocodeResult? stay = await TryGeocodeAsync(trip.StayAddress, ct);
+            trip.StayLat = stay?.Location.Latitude;
+            trip.StayLng = stay?.Location.Longitude;
+        }
+
+        if (geocodeLocation)
+        {
+            GeocodeResult? location = await TryGeocodeAsync(trip.LocationName, ct);
+            trip.LocationLat = location?.Location.Latitude;
+            trip.LocationLng = location?.Location.Longitude;
+        }
+    }
+
+    /// <summary>Best-effort by design: a geocoding outage or an unrecognisable address must not
+    /// block saving a trip, so failures leave the coordinate null. Place search reports the gap
+    /// separately via <see cref="TripNotGeocodedException"/> rather than failing here.</summary>
+    private async Task<GeocodeResult?> TryGeocodeAsync(string address, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(address))
+        {
+            return null;
+        }
+
+        try
+        {
+            return await geocoder.GeocodeAsync(address, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Address text is deliberately not logged — it is user PII and the exception is enough to diagnose.
+            logger.LogWarning(ex, "Geocoding failed; trip coordinate left unresolved");
+            return null;
+        }
+    }
 }

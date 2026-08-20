@@ -34,14 +34,14 @@ public class TripEndpointsTests(PlanoramaWebApplicationFactory factory)
     {
         var login = await AuthTestHelpers.RegisterConfirmAndLoginAsync(_client, factory, AuthTestHelpers.UniqueEmail());
 
-        var createResponse = await AuthenticatedPostAsync("/api/v1/trips", login.Tokens.AccessToken, ValidTripRequest(), Guid.NewGuid().ToString());
+        var createResponse = await _client.AuthenticatedPostAsync("/api/v1/trips", login.Tokens.AccessToken, ValidTripRequest(), Guid.NewGuid().ToString());
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
         var created = await createResponse.Content.ReadFromJsonAsync<TripResponse>(JsonOptions);
         Assert.NotNull(created);
         Assert.Equal(login.User.Id, created!.CreatorId);
         Assert.Equal(TripStatus.Draft, created.Status);
 
-        var getResponse = await AuthenticatedGetAsync($"/api/v1/trips/{created.Id}", login.Tokens.AccessToken);
+        var getResponse = await _client.AuthenticatedGetAsync($"/api/v1/trips/{created.Id}", login.Tokens.AccessToken);
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
         var fetched = await getResponse.Content.ReadFromJsonAsync<TripResponse>(JsonOptions);
         Assert.Equal(created.Id, fetched!.Id);
@@ -65,10 +65,10 @@ public class TripEndpointsTests(PlanoramaWebApplicationFactory factory)
         var loginA = await AuthTestHelpers.RegisterConfirmAndLoginAsync(_client, factory, AuthTestHelpers.UniqueEmail());
         var loginB = await AuthTestHelpers.RegisterConfirmAndLoginAsync(_client, factory, AuthTestHelpers.UniqueEmail());
 
-        await AuthenticatedPostAsync("/api/v1/trips", loginA.Tokens.AccessToken, ValidTripRequest("A's Trip"), Guid.NewGuid().ToString());
-        await AuthenticatedPostAsync("/api/v1/trips", loginB.Tokens.AccessToken, ValidTripRequest("B's Trip"), Guid.NewGuid().ToString());
+        await _client.AuthenticatedPostAsync("/api/v1/trips", loginA.Tokens.AccessToken, ValidTripRequest("A's Trip"), Guid.NewGuid().ToString());
+        await _client.AuthenticatedPostAsync("/api/v1/trips", loginB.Tokens.AccessToken, ValidTripRequest("B's Trip"), Guid.NewGuid().ToString());
 
-        var response = await AuthenticatedGetAsync("/api/v1/trips", loginA.Tokens.AccessToken);
+        var response = await _client.AuthenticatedGetAsync("/api/v1/trips", loginA.Tokens.AccessToken);
         var trips = await response.Content.ReadFromJsonAsync<List<TripResponse>>(JsonOptions);
 
         Assert.Contains(trips!, t => t.Name == "A's Trip");
@@ -83,7 +83,7 @@ public class TripEndpointsTests(PlanoramaWebApplicationFactory factory)
 
         var trip = await CreateTripAsync(creator.Tokens.AccessToken);
 
-        var response = await AuthenticatedGetAsync($"/api/v1/trips/{trip.Id}", outsider.Tokens.AccessToken);
+        var response = await _client.AuthenticatedGetAsync($"/api/v1/trips/{trip.Id}", outsider.Tokens.AccessToken);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
@@ -96,7 +96,7 @@ public class TripEndpointsTests(PlanoramaWebApplicationFactory factory)
         var update = new UpdateTripRequest(
             "Renamed Trip", "Updated description", trip.LocationName, trip.StayAddress,
             trip.StartDate, trip.EndDate, trip.Timezone, trip.DefaultVotingWindowHours, TripStatus.Planning);
-        var response = await AuthenticatedPatchAsync($"/api/v1/trips/{trip.Id}", creator.Tokens.AccessToken, update);
+        var response = await _client.AuthenticatedPatchAsync($"/api/v1/trips/{trip.Id}", creator.Tokens.AccessToken, update);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var updated = await response.Content.ReadFromJsonAsync<TripResponse>(JsonOptions);
@@ -114,7 +114,7 @@ public class TripEndpointsTests(PlanoramaWebApplicationFactory factory)
         var update = new UpdateTripRequest(
             trip.Name, trip.Description, trip.LocationName, trip.StayAddress,
             trip.StartDate, trip.EndDate, trip.Timezone, trip.DefaultVotingWindowHours, trip.Status);
-        var response = await AuthenticatedPatchAsync($"/api/v1/trips/{trip.Id}", outsider.Tokens.AccessToken, update);
+        var response = await _client.AuthenticatedPatchAsync($"/api/v1/trips/{trip.Id}", outsider.Tokens.AccessToken, update);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -126,12 +126,12 @@ public class TripEndpointsTests(PlanoramaWebApplicationFactory factory)
         var member = await AuthTestHelpers.RegisterConfirmAndLoginAsync(_client, factory, AuthTestHelpers.UniqueEmail());
         var trip = await CreateTripAsync(creator.Tokens.AccessToken);
         var invite = await CreateLinkInviteAsync(trip.Id, creator.Tokens.AccessToken);
-        await AuthenticatedPostAsync($"/api/v1/invites/{invite.Token}/accept", member.Tokens.AccessToken);
+        await _client.AuthenticatedPostAsync($"/api/v1/invites/{invite.Token}/accept", member.Tokens.AccessToken);
 
         var update = new UpdateTripRequest(
             trip.Name, trip.Description, trip.LocationName, trip.StayAddress,
             trip.StartDate, trip.EndDate, trip.Timezone, trip.DefaultVotingWindowHours, trip.Status);
-        var response = await AuthenticatedPatchAsync($"/api/v1/trips/{trip.Id}", member.Tokens.AccessToken, update);
+        var response = await _client.AuthenticatedPatchAsync($"/api/v1/trips/{trip.Id}", member.Tokens.AccessToken, update);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
@@ -154,7 +154,7 @@ public class TripEndpointsTests(PlanoramaWebApplicationFactory factory)
         var creator = await AuthTestHelpers.RegisterConfirmAndLoginAsync(_client, factory, AuthTestHelpers.UniqueEmail());
         var trip = await CreateTripAsync(creator.Tokens.AccessToken);
 
-        var response = await AuthenticatedPostAsync(
+        var response = await _client.AuthenticatedPostAsync(
             $"/api/v1/trips/{trip.Id}/invites", creator.Tokens.AccessToken,
             new CreateInviteRequest(InvitedVia.Email, "friend@example.com"), Guid.NewGuid().ToString());
 
@@ -170,7 +170,7 @@ public class TripEndpointsTests(PlanoramaWebApplicationFactory factory)
         var outsider = await AuthTestHelpers.RegisterConfirmAndLoginAsync(_client, factory, AuthTestHelpers.UniqueEmail());
         var trip = await CreateTripAsync(creator.Tokens.AccessToken);
 
-        var response = await AuthenticatedPostAsync(
+        var response = await _client.AuthenticatedPostAsync(
             $"/api/v1/trips/{trip.Id}/invites", outsider.Tokens.AccessToken,
             new CreateInviteRequest(InvitedVia.Link, null), Guid.NewGuid().ToString());
 
@@ -184,9 +184,9 @@ public class TripEndpointsTests(PlanoramaWebApplicationFactory factory)
         var member = await AuthTestHelpers.RegisterConfirmAndLoginAsync(_client, factory, AuthTestHelpers.UniqueEmail());
         var trip = await CreateTripAsync(creator.Tokens.AccessToken);
         var invite = await CreateLinkInviteAsync(trip.Id, creator.Tokens.AccessToken);
-        await AuthenticatedPostAsync($"/api/v1/invites/{invite.Token}/accept", member.Tokens.AccessToken);
+        await _client.AuthenticatedPostAsync($"/api/v1/invites/{invite.Token}/accept", member.Tokens.AccessToken);
 
-        var response = await AuthenticatedPostAsync(
+        var response = await _client.AuthenticatedPostAsync(
             $"/api/v1/trips/{trip.Id}/invites", member.Tokens.AccessToken,
             new CreateInviteRequest(InvitedVia.Link, null), Guid.NewGuid().ToString());
 
@@ -201,10 +201,10 @@ public class TripEndpointsTests(PlanoramaWebApplicationFactory factory)
         var trip = await CreateTripAsync(creator.Tokens.AccessToken);
         var invite = await CreateLinkInviteAsync(trip.Id, creator.Tokens.AccessToken);
 
-        var acceptResponse = await AuthenticatedPostAsync($"/api/v1/invites/{invite.Token}/accept", invitee.Tokens.AccessToken);
+        var acceptResponse = await _client.AuthenticatedPostAsync($"/api/v1/invites/{invite.Token}/accept", invitee.Tokens.AccessToken);
         Assert.Equal(HttpStatusCode.OK, acceptResponse.StatusCode);
 
-        var getResponse = await AuthenticatedGetAsync($"/api/v1/trips/{trip.Id}", invitee.Tokens.AccessToken);
+        var getResponse = await _client.AuthenticatedGetAsync($"/api/v1/trips/{trip.Id}", invitee.Tokens.AccessToken);
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
     }
 
@@ -216,8 +216,8 @@ public class TripEndpointsTests(PlanoramaWebApplicationFactory factory)
         var trip = await CreateTripAsync(creator.Tokens.AccessToken);
         var invite = await CreateLinkInviteAsync(trip.Id, creator.Tokens.AccessToken);
 
-        var first = await AuthenticatedPostAsync($"/api/v1/invites/{invite.Token}/accept", invitee.Tokens.AccessToken);
-        var second = await AuthenticatedPostAsync($"/api/v1/invites/{invite.Token}/accept", invitee.Tokens.AccessToken);
+        var first = await _client.AuthenticatedPostAsync($"/api/v1/invites/{invite.Token}/accept", invitee.Tokens.AccessToken);
+        var second = await _client.AuthenticatedPostAsync($"/api/v1/invites/{invite.Token}/accept", invitee.Tokens.AccessToken);
 
         Assert.Equal(HttpStatusCode.OK, first.StatusCode);
         Assert.Equal(HttpStatusCode.OK, second.StatusCode);
@@ -228,7 +228,7 @@ public class TripEndpointsTests(PlanoramaWebApplicationFactory factory)
     {
         var login = await AuthTestHelpers.RegisterConfirmAndLoginAsync(_client, factory, AuthTestHelpers.UniqueEmail());
 
-        var response = await AuthenticatedPostAsync($"/api/v1/invites/{Guid.NewGuid()}/accept", login.Tokens.AccessToken);
+        var response = await _client.AuthenticatedPostAsync($"/api/v1/invites/{Guid.NewGuid()}/accept", login.Tokens.AccessToken);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -241,20 +241,20 @@ public class TripEndpointsTests(PlanoramaWebApplicationFactory factory)
         var trip = await CreateTripAsync(creator.Tokens.AccessToken);
         var expiredToken = await InsertExpiredInvitationAsync(trip.Id);
 
-        var response = await AuthenticatedPostAsync($"/api/v1/invites/{expiredToken}/accept", invitee.Tokens.AccessToken);
+        var response = await _client.AuthenticatedPostAsync($"/api/v1/invites/{expiredToken}/accept", invitee.Tokens.AccessToken);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     private async Task<TripResponse> CreateTripAsync(string accessToken)
     {
-        var response = await AuthenticatedPostAsync("/api/v1/trips", accessToken, ValidTripRequest(), Guid.NewGuid().ToString());
+        var response = await _client.AuthenticatedPostAsync("/api/v1/trips", accessToken, ValidTripRequest(), Guid.NewGuid().ToString());
         return (await response.Content.ReadFromJsonAsync<TripResponse>(JsonOptions))!;
     }
 
     private async Task<InviteResponse> CreateLinkInviteAsync(Guid tripId, string accessToken)
     {
-        var response = await AuthenticatedPostAsync(
+        var response = await _client.AuthenticatedPostAsync(
             $"/api/v1/trips/{tripId}/invites", accessToken, new CreateInviteRequest(InvitedVia.Link, null), Guid.NewGuid().ToString());
         return (await response.Content.ReadFromJsonAsync<InviteResponse>(JsonOptions))!;
     }
@@ -275,32 +275,4 @@ public class TripEndpointsTests(PlanoramaWebApplicationFactory factory)
         return invitation.Token;
     }
 
-    private Task<HttpResponseMessage> AuthenticatedGetAsync(string url, string accessToken)
-    {
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-        return _client.SendAsync(request);
-    }
-
-    private Task<HttpResponseMessage> AuthenticatedPatchAsync<T>(string url, string accessToken, T body)
-    {
-        var request = new HttpRequestMessage(HttpMethod.Patch, url) { Content = JsonContent.Create(body) };
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-        return _client.SendAsync(request);
-    }
-
-    private Task<HttpResponseMessage> AuthenticatedPostAsync<T>(string url, string accessToken, T body, string idempotencyKey)
-    {
-        var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = JsonContent.Create(body) };
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-        request.Headers.Add("Idempotency-Key", idempotencyKey);
-        return _client.SendAsync(request);
-    }
-
-    private Task<HttpResponseMessage> AuthenticatedPostAsync(string url, string accessToken)
-    {
-        var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-        return _client.SendAsync(request);
-    }
 }

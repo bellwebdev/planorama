@@ -28,6 +28,7 @@ services:
       Email__InviteUrlBase: ${FRONTEND_ORIGIN:-http://localhost:5173}/invites/accept
       Google__ClientId: ${GOOGLE_OAUTH_CLIENT_ID}
       Turnstile__SecretKey: ${TURNSTILE_SECRET_KEY}
+      Geoapify__ApiKey: ${GEOAPIFY_API_KEY}
       R2__AccountId: ${R2_ACCOUNT_ID}
       R2__AccessKeyId: ${R2_ACCESS_KEY_ID}
       R2__SecretAccessKey: ${R2_SECRET_ACCESS_KEY}
@@ -83,6 +84,10 @@ services:
   cache:
     image: redis:7
     restart: unless-stopped
+    # Published so a locally-run API (outside compose) shares the same cache; offset from 6379
+    # for the same reason the db is offset from 5432.
+    ports:
+      - "6380:6379"
     volumes:
       - cache_data:/data
 

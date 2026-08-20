@@ -18,7 +18,14 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Serilog.AspNetCore" Version="8.0.3" />
+    <PackageReference Include="StackExchange.Redis" Version="3.1.13" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The Geoapify category map is an internal adapter detail but is worth testing directly:
+         a silent taxonomy typo would just return empty searches. -->
+    <InternalsVisibleTo Include="Planorama.Tests" />
   </ItemGroup>
 
   <PropertyGroup>

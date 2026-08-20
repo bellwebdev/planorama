@@ -7,8 +7,8 @@ namespace Planorama.Core.Exceptions;
 /// <c>AuthProblemExceptionHandler</c> in Planorama.Api and mapped straight to RFC 7807
 /// problem+json — endpoint handlers never catch these themselves.
 /// </summary>
-public abstract class AuthProblemException(HttpStatusCode statusCode, string title, string? detail = null)
-    : Exception(detail ?? title)
+public abstract class AuthProblemException(HttpStatusCode statusCode, string title, string? detail = null, Exception? innerException = null)
+    : Exception(detail ?? title, innerException)
 {
     public HttpStatusCode StatusCode { get; } = statusCode;
     public string Title { get; } = title;
