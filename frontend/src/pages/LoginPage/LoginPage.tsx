@@ -24,7 +24,7 @@ export function LoginPage() {
     (idToken: string) => {
       setError(null);
       loginWithGoogle(idToken)
-        .then(() => navigate("/profile", { replace: true }))
+        .then(() => navigate("/trips", { replace: true }))
         .catch((err: unknown) => setError(err));
     },
     [loginWithGoogle, navigate],
@@ -38,7 +38,7 @@ export function LoginPage() {
     setSubmitting(true);
     try {
       await login(email, password);
-      navigate("/profile", { replace: true });
+      navigate("/trips", { replace: true });
     } catch (err) {
       setError(err);
     } finally {

@@ -1,0 +1,85 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+@media (min-width: 40rem) {
+  .header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.hint {
+  font-size: var(--font-size-body);
+  color: var(--text-muted);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  color: var(--text-muted);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.tripCardLink {
+  text-decoration: none;
+  color: inherit;
+}
+
+.tripCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  transition: border-color 0.15s ease;
+}
+
+.tripCardLink:hover .tripCard,
+.tripCardLink:focus-visible .tripCard {
+  border-color: var(--brand-primary);
+}
+
+.tripCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.tripName {
+  font-size: var(--font-size-body-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-default);
+}
+
+.status {
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  color: var(--brand-primary);
+  background: color-mix(in srgb, var(--brand-primary) 10%, transparent);
+  border-radius: var(--radius-full);
+  padding: 0.125rem var(--space-3);
+  flex-shrink: 0;
+}
+
+.tripMeta {
+  font-size: var(--font-size-caption);
+  color: var(--text-muted);
+}

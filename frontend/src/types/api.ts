@@ -40,3 +40,58 @@ export interface SettingsResponse {
   notifyEmail: boolean;
   notifyPush: boolean;
 }
+
+// Mirrors backend/src/Planorama.Api/Contracts/Trips/*.cs 1:1.
+
+export type TripStatus = "Draft" | "Planning" | "Active" | "Completed";
+export type InvitedVia = "Link" | "Email";
+
+export interface TripResponse {
+  id: string;
+  creatorId: string;
+  name: string;
+  description: string | null;
+  locationName: string;
+  stayAddress: string;
+  startDate: string;
+  endDate: string;
+  timezone: string;
+  status: TripStatus;
+  defaultVotingWindowHours: number;
+  createdAt: string;
+}
+
+export interface CreateTripRequest {
+  name: string;
+  description?: string | null;
+  locationName: string;
+  stayAddress: string;
+  startDate: string;
+  endDate: string;
+  timezone: string;
+  defaultVotingWindowHours?: number | null;
+}
+
+export interface UpdateTripRequest {
+  name: string;
+  description?: string | null;
+  locationName: string;
+  stayAddress: string;
+  startDate: string;
+  endDate: string;
+  timezone: string;
+  defaultVotingWindowHours: number;
+  status: TripStatus;
+}
+
+export interface InviteResponse {
+  token: string;
+  invitedVia: InvitedVia;
+  contact: string | null;
+  expiresAt: string;
+}
+
+export interface CreateInviteRequest {
+  via: InvitedVia;
+  contact?: string | null;
+}

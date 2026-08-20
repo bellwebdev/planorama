@@ -17,6 +17,9 @@ export function AppShell() {
         <div className={styles.headerInner}>
           <span className={styles.logo}>Planorama</span>
           <nav className={styles.nav}>
+            <NavLink to="/trips" className={navLinkClassName}>
+              Trips
+            </NavLink>
             <NavLink to="/profile" className={navLinkClassName}>
               Profile
             </NavLink>
