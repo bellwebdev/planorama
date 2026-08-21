@@ -2,7 +2,9 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.DependencyInjection;
 using Planorama.Api.Contracts.Auth;
+using Planorama.Api.Contracts.Me;
 using Planorama.Api.Contracts.Suggestions;
 using Planorama.Api.Contracts.Trips;
 using Planorama.Core.Domain;
@@ -188,6 +190,44 @@ public class SuggestionEndpointsTests(PlanoramaWebApplicationFactory factory)
             suggestion.VotingClosesAt,
             DateTimeOffset.UtcNow.AddMinutes(55),
             DateTimeOffset.UtcNow.AddMinutes(65));
+    }
+
+    [Fact]
+    public async Task Creating_a_suggestion_emails_the_other_accepted_member_but_not_the_suggester()
+    {
+        (var owner, var member, TripResponse trip) = await CreateTripWithTwoMembersAsync();
+        var jobs = (NoOpBackgroundJobClient)factory.Services.GetRequiredService<Hangfire.IBackgroundJobClient>();
+
+        await CreateSuggestionAsync(
+            trip.Id, owner.Tokens.AccessToken, new CreateSuggestionRequest(null, "Notify test golf", null, null, null, null, null, null));
+
+        var notified = jobs.EnqueuedJobs
+            .Where(j => j.Method.Name == nameof(Planorama.Core.Jobs.IEmailDispatchJob.SendSuggestionAddedAsync)
+                && (string)j.Args[3]! == "Notify test golf")
+            .ToList();
+
+        var notifiedEmail = Assert.Single(notified);
+        Assert.Equal(member.User.Email, notifiedEmail.Args[0]);
+    }
+
+    [Fact]
+    public async Task Creating_a_suggestion_does_not_email_a_member_who_opted_out()
+    {
+        (var owner, var member, TripResponse trip) = await CreateTripWithTwoMembersAsync();
+        var jobs = (NoOpBackgroundJobClient)factory.Services.GetRequiredService<Hangfire.IBackgroundJobClient>();
+
+        var optOut = await _client.AuthenticatedPatchAsync(
+            "/api/v1/me/settings", member.Tokens.AccessToken, new UpdateSettingsRequest(ReminderOffset.TwelveHours, false, false));
+        optOut.EnsureSuccessStatusCode();
+
+        await CreateSuggestionAsync(
+            trip.Id, owner.Tokens.AccessToken, new CreateSuggestionRequest(null, "Opted out golf", null, null, null, null, null, null));
+
+        var notified = jobs.EnqueuedJobs
+            .Where(j => j.Method.Name == nameof(Planorama.Core.Jobs.IEmailDispatchJob.SendSuggestionAddedAsync)
+                && (string)j.Args[3]! == "Opted out golf");
+
+        Assert.Empty(notified);
     }
 
     private async Task<(LoginResponse Owner, LoginResponse Member, TripResponse Trip)> CreateTripWithTwoMembersAsync()

@@ -38,4 +38,18 @@ public class EmailDispatchJob(IEmailSender emailSender) : IEmailDispatchJob
         var message = new EmailMessage(toEmail, $"You're invited to {tripName}", html, text);
         return emailSender.SendAsync(message, CancellationToken.None); // No request-scoped token exists inside a background job.
     }
+
+    /// <inheritdoc/>
+    public Task SendSuggestionAddedAsync(string toEmail, string recipientName, string tripName, string suggestionTitle, string tripUrl)
+    {
+        var html = $"""
+            <p>Hi {recipientName},</p>
+            <p><strong>{suggestionTitle}</strong> was just suggested for <strong>{tripName}</strong>.</p>
+            <p><a href="{tripUrl}">View and vote</a></p>
+            """;
+        var text = $"Hi {recipientName},\n\n{suggestionTitle} was just suggested for {tripName}.\n\nView and vote: {tripUrl}";
+
+        var message = new EmailMessage(toEmail, $"New suggestion for {tripName}", html, text);
+        return emailSender.SendAsync(message, CancellationToken.None); // No request-scoped token exists inside a background job.
+    }
 }

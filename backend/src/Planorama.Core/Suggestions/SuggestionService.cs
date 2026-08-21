@@ -1,9 +1,13 @@
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Planorama.Core.Data;
 using Planorama.Core.Domain;
 using Planorama.Core.Exceptions;
 using Planorama.Core.Integrations;
+using Planorama.Core.Jobs;
+using Planorama.Core.Options;
 using Planorama.Core.Trips;
 
 namespace Planorama.Core.Suggestions;
@@ -13,9 +17,13 @@ public class SuggestionService(
     PlanoramaDbContext db,
     IPlacesProvider places,
     IGeocodingProvider geocoder,
+    IBackgroundJobClient backgroundJobClient,
+    IOptions<EmailOptions> emailOptions,
     TimeProvider timeProvider,
     ILogger<SuggestionService> logger) : ISuggestionService
 {
+    private readonly EmailOptions _email = emailOptions.Value;
+
     /// <inheritdoc/>
     public async Task<SuggestionResult> CreateAsync(Guid tripId, Guid userId, CreateSuggestionCommand command, CancellationToken ct)
     {
@@ -57,7 +65,29 @@ public class SuggestionService(
         db.Suggestions.Add(suggestion);
         await db.SaveChangesAsync(ct);
 
+        await NotifyMembersAsync(trip, suggestion, userId, ct);
+
         return await GetByIdAsync(suggestion.Id, userId, ct);
+    }
+
+    /// <summary>Emails accepted trip members other than the suggester, skipping anyone who opted
+    /// out via <see cref="UserSettings.NotifyEmail"/> — a member with no settings row yet has never
+    /// touched their preferences, so the entity's default (opted in) applies (spec §8).</summary>
+    private async Task NotifyMembersAsync(Trip trip, Suggestion suggestion, Guid suggesterId, CancellationToken ct)
+    {
+        List<(string Email, string DisplayName)> recipients = await db.TripMembers
+            .Where(m => m.TripId == trip.Id && m.Status == TripMemberStatus.Accepted && m.UserId != suggesterId)
+            .Join(db.Users, m => m.UserId, u => u.Id, (_, u) => u)
+            .Where(u => u.Settings == null || u.Settings.NotifyEmail)
+            .Select(u => new ValueTuple<string, string>(u.Email!, u.DisplayName))
+            .ToListAsync(ct);
+
+        var tripUrl = $"{_email.SuggestionUrlBase}/{trip.Id}";
+        foreach ((string toEmail, string displayName) in recipients)
+        {
+            backgroundJobClient.Enqueue<IEmailDispatchJob>(
+                j => j.SendSuggestionAddedAsync(toEmail, displayName, trip.Name, suggestion.Title, tripUrl));
+        }
     }
 
     /// <inheritdoc/>

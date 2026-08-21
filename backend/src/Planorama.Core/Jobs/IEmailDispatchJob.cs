@@ -12,4 +12,6 @@ public interface IEmailDispatchJob
     Task SendEmailConfirmationAsync(string toEmail, string displayName, string confirmationUrl);
 
     Task SendTripInviteAsync(string toEmail, string tripName, string acceptUrl);
+
+    Task SendSuggestionAddedAsync(string toEmail, string recipientName, string tripName, string suggestionTitle, string tripUrl);
 }
