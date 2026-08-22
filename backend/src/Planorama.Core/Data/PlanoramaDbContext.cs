@@ -18,6 +18,8 @@ public class PlanoramaDbContext(DbContextOptions<PlanoramaDbContext> options)
     public DbSet<Suggestion> Suggestions => Set<Suggestion>();
     public DbSet<Vote> Votes => Set<Vote>();
     public DbSet<Invitation> Invitations => Set<Invitation>();
+    public DbSet<ItineraryItem> ItineraryItems => Set<ItineraryItem>();
+    public DbSet<Reminder> Reminders => Set<Reminder>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -137,6 +139,37 @@ public class PlanoramaDbContext(DbContextOptions<PlanoramaDbContext> options)
                 .WithMany()
                 .HasForeignKey(i => i.TripId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<ItineraryItem>(item =>
+        {
+            item.Property(i => i.Timezone).HasMaxLength(100);
+            item.HasOne(i => i.Trip)
+                .WithMany()
+                .HasForeignKey(i => i.TripId)
+                .OnDelete(DeleteBehavior.Cascade);
+            // SetNull, not Cascade: losing its suggestion turns an item into an orphaned/pinned
+            // entry rather than deleting it — there's no suggestion-delete path today, but the
+            // schema is designed to support creator-pinned items with no suggestion at all.
+            item.HasOne(i => i.Suggestion)
+                .WithMany()
+                .HasForeignKey(i => i.SuggestionId)
+                .OnDelete(DeleteBehavior.SetNull);
+            item.HasIndex(i => i.TripId);
+        });
+
+        builder.Entity<Reminder>(reminder =>
+        {
+            reminder.Property(r => r.HangfireJobId).HasMaxLength(50);
+            reminder.HasOne(r => r.ItineraryItem)
+                .WithMany()
+                .HasForeignKey(r => r.ItineraryItemId)
+                .OnDelete(DeleteBehavior.Cascade);
+            reminder.HasOne<AppUser>()
+                .WithMany()
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            reminder.HasIndex(r => r.ItineraryItemId);
         });
     }
 }

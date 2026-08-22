@@ -10,6 +10,7 @@ using Planorama.Core.Caching;
 using Planorama.Core.Data;
 using Planorama.Core.Integrations;
 using Planorama.Core.Media;
+using Planorama.Core.Suggestions;
 using Testcontainers.PostgreSql;
 using Xunit;
 
@@ -49,6 +50,7 @@ public class PlanoramaWebApplicationFactory : WebApplicationFactory<Program>, IA
                 ["Jwt:Issuer"] = "planorama-tests",
                 ["Jwt:Audience"] = "planorama-tests",
                 ["Email:ConfirmationUrlBase"] = "https://app.test/confirm-email",
+                ["Email:SuggestionUrlBase"] = "https://app.test/trips",
                 ["Cors:AllowedOrigins:0"] = "https://app.test",
                 ["Google:ClientId"] = "test-client-id",
                 // Satisfies the ValidateOnStart check; every outbound Geoapify call is faked below.
@@ -64,8 +66,10 @@ public class PlanoramaWebApplicationFactory : WebApplicationFactory<Program>, IA
 
         builder.ConfigureServices(services =>
         {
+            // Singleton, not scoped: tests resolve this same instance from the factory afterwards
+            // to assert on NoOpBackgroundJobClient.EnqueuedJobs.
             services.RemoveAll<IBackgroundJobClient>();
-            services.AddScoped<IBackgroundJobClient, NoOpBackgroundJobClient>();
+            services.AddSingleton<IBackgroundJobClient, NoOpBackgroundJobClient>();
 
             services.RemoveAll<IGoogleIdTokenValidator>();
             services.AddScoped<IGoogleIdTokenValidator, FakeGoogleIdTokenValidator>();
@@ -92,6 +96,11 @@ public class PlanoramaWebApplicationFactory : WebApplicationFactory<Program>, IA
 
             services.RemoveAll<ICacheStore>();
             services.AddSingleton<ICacheStore, InMemoryCacheStore>();
+
+            // Singleton, not scoped: tests resolve this same instance from the factory afterwards
+            // to set FakeCoinFlip.NextResult before triggering resolution.
+            services.RemoveAll<ICoinFlip>();
+            services.AddSingleton<ICoinFlip, FakeCoinFlip>();
         });
     }
 

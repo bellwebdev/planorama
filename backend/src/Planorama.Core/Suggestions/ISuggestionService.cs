@@ -19,6 +19,12 @@ public interface ISuggestionService
     /// <exception cref="Exceptions.SuggestionNotFoundException">No such suggestion, or the caller isn't an accepted member of its trip.</exception>
     /// <exception cref="Exceptions.VotingClosedException">The voting window has already closed.</exception>
     Task<SuggestionResult> CastVoteAsync(Guid suggestionId, Guid userId, VoteValue value, CancellationToken ct);
+
+    /// <summary>Trip-creator veto/force-approve, at any time — before or after resolution (spec
+    /// §6.7). Always <see cref="SuggestionResolution.Manual"/>; always logs and notifies.</summary>
+    /// <exception cref="Exceptions.SuggestionNotFoundException">No such suggestion.</exception>
+    /// <exception cref="Exceptions.ForbiddenException">The caller isn't the trip's creator.</exception>
+    Task<SuggestionResult> OverrideAsync(Guid suggestionId, Guid creatorId, bool approved, CancellationToken ct);
 }
 
 /// <param name="ProviderPlaceId">When set, place data is re-fetched from the provider rather than trusted from the client.</param>

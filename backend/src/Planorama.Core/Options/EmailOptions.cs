@@ -13,4 +13,7 @@ public class EmailOptions
 
     /// <summary>Base URL a trip invite accept link is built against, e.g. "https://app.planorama.family/invites/accept".</summary>
     public string InviteUrlBase { get; set; } = string.Empty;
+
+    /// <summary>Base URL a suggestion-added link is built against (trip id appended), e.g. "https://app.planorama.family/trips".</summary>
+    public string SuggestionUrlBase { get; set; } = string.Empty;
 }

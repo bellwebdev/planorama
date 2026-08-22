@@ -38,4 +38,47 @@ public class EmailDispatchJob(IEmailSender emailSender) : IEmailDispatchJob
         var message = new EmailMessage(toEmail, $"You're invited to {tripName}", html, text);
         return emailSender.SendAsync(message, CancellationToken.None); // No request-scoped token exists inside a background job.
     }
+
+    /// <inheritdoc/>
+    public Task SendSuggestionAddedAsync(string toEmail, string recipientName, string tripName, string suggestionTitle, string tripUrl)
+    {
+        var html = $"""
+            <p>Hi {recipientName},</p>
+            <p><strong>{suggestionTitle}</strong> was just suggested for <strong>{tripName}</strong>.</p>
+            <p><a href="{tripUrl}">View and vote</a></p>
+            """;
+        var text = $"Hi {recipientName},\n\n{suggestionTitle} was just suggested for {tripName}.\n\nView and vote: {tripUrl}";
+
+        var message = new EmailMessage(toEmail, $"New suggestion for {tripName}", html, text);
+        return emailSender.SendAsync(message, CancellationToken.None); // No request-scoped token exists inside a background job.
+    }
+
+    /// <inheritdoc/>
+    public Task SendVoteResultAsync(string toEmail, string recipientName, string tripName, string suggestionTitle, bool approved, string tripUrl)
+    {
+        var outcome = approved ? "approved" : "not approved";
+        var html = $"""
+            <p>Hi {recipientName},</p>
+            <p><strong>{suggestionTitle}</strong> was {outcome} for <strong>{tripName}</strong>.</p>
+            <p><a href="{tripUrl}">View the trip</a></p>
+            """;
+        var text = $"Hi {recipientName},\n\n{suggestionTitle} was {outcome} for {tripName}.\n\nView the trip: {tripUrl}";
+
+        var message = new EmailMessage(toEmail, $"Voting result for {suggestionTitle}", html, text);
+        return emailSender.SendAsync(message, CancellationToken.None); // No request-scoped token exists inside a background job.
+    }
+
+    /// <inheritdoc/>
+    public Task SendEventReminderAsync(string toEmail, string recipientName, string tripName, string itemTitle, string tripUrl)
+    {
+        var html = $"""
+            <p>Hi {recipientName},</p>
+            <p><strong>{itemTitle}</strong> on <strong>{tripName}</strong> is coming up.</p>
+            <p><a href="{tripUrl}">View the itinerary</a></p>
+            """;
+        var text = $"Hi {recipientName},\n\n{itemTitle} on {tripName} is coming up.\n\nView the itinerary: {tripUrl}";
+
+        var message = new EmailMessage(toEmail, $"Reminder: {itemTitle}", html, text);
+        return emailSender.SendAsync(message, CancellationToken.None); // No request-scoped token exists inside a background job.
+    }
 }

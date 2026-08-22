@@ -37,19 +37,11 @@ public static class VotingWindow
         // intent, and midnight-of-the-date would close voting a day and a half early.
         DateOnly anchorDate = proposedDate ?? tripStartDate;
         TimeOnly anchorTime = proposedDate is null ? TimeOnly.MinValue : proposedStartTime ?? TimeOnly.MinValue;
-        DateTimeOffset latestAllowed = ToInstant(anchorDate, anchorTime, tripTimezone) - PreEventBuffer;
+        DateTimeOffset latestAllowed = TripTimeZone.ToUtcInstant(anchorDate, anchorTime, tripTimezone) - PreEventBuffer;
 
         DateTimeOffset clamped = target < latestAllowed ? target : latestAllowed;
         DateTimeOffset floor = now + MinimumWindow;
 
         return clamped > floor ? clamped : floor;
-    }
-
-    /// <summary>Resolves a wall-clock date/time in the trip's zone to a UTC instant. All window
-    /// arithmetic happens in UTC — there is no "trip local time" concept in the domain.</summary>
-    private static DateTimeOffset ToInstant(DateOnly date, TimeOnly time, TimeZoneInfo timezone)
-    {
-        var local = new DateTime(date.Year, date.Month, date.Day, time.Hour, time.Minute, 0, DateTimeKind.Unspecified);
-        return new DateTimeOffset(local, timezone.GetUtcOffset(local)).ToUniversalTime();
     }
 }

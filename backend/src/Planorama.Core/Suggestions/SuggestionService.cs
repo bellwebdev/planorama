@@ -1,9 +1,15 @@
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Planorama.Core.Data;
 using Planorama.Core.Domain;
 using Planorama.Core.Exceptions;
 using Planorama.Core.Integrations;
+using Planorama.Core.Itinerary;
+using Planorama.Core.Jobs;
+using Planorama.Core.Notifications;
+using Planorama.Core.Options;
 using Planorama.Core.Trips;
 
 namespace Planorama.Core.Suggestions;
@@ -13,9 +19,15 @@ public class SuggestionService(
     PlanoramaDbContext db,
     IPlacesProvider places,
     IGeocodingProvider geocoder,
+    IBackgroundJobClient backgroundJobClient,
+    VoteResultNotifier notifier,
+    ItinerarySyncService itinerarySync,
+    IOptions<EmailOptions> emailOptions,
     TimeProvider timeProvider,
     ILogger<SuggestionService> logger) : ISuggestionService
 {
+    private readonly EmailOptions _email = emailOptions.Value;
+
     /// <inheritdoc/>
     public async Task<SuggestionResult> CreateAsync(Guid tripId, Guid userId, CreateSuggestionCommand command, CancellationToken ct)
     {
@@ -50,14 +62,31 @@ public class SuggestionService(
                 command.ProposedDate,
                 command.ProposedStartTime,
                 trip.StartDate,
-                ResolveTimezone(trip.Timezone)),
+                TripTimeZone.Resolve(trip.Timezone, logger)),
             CreatedAt = timeProvider.GetUtcNow(),
         };
 
         db.Suggestions.Add(suggestion);
         await db.SaveChangesAsync(ct);
 
+        await NotifyMembersAsync(trip, suggestion, userId, ct);
+
         return await GetByIdAsync(suggestion.Id, userId, ct);
+    }
+
+    /// <summary>Emails accepted trip members other than the suggester, skipping anyone who opted
+    /// out via <see cref="UserSettings.NotifyEmail"/> — a member with no settings row yet has never
+    /// touched their preferences, so the entity's default (opted in) applies (spec §8).</summary>
+    private async Task NotifyMembersAsync(Trip trip, Suggestion suggestion, Guid suggesterId, CancellationToken ct)
+    {
+        List<(string Email, string DisplayName)> recipients = await db.NotifiableMembers(trip.Id, suggesterId).ToListAsync(ct);
+
+        var tripUrl = $"{_email.SuggestionUrlBase}/{trip.Id}";
+        foreach ((string toEmail, string displayName) in recipients)
+        {
+            backgroundJobClient.Enqueue<IEmailDispatchJob>(
+                j => j.SendSuggestionAddedAsync(toEmail, displayName, trip.Name, suggestion.Title, tripUrl));
+        }
     }
 
     /// <inheritdoc/>
@@ -120,6 +149,39 @@ public class SuggestionService(
 
         await db.SaveChangesAsync(ct);
         return await GetByIdAsync(suggestionId, userId, ct);
+    }
+
+    /// <inheritdoc/>
+    public async Task<SuggestionResult> OverrideAsync(Guid suggestionId, Guid creatorId, bool approved, CancellationToken ct)
+    {
+        Suggestion suggestion = await db.Suggestions
+            .AccessibleBy(creatorId)
+            .Where(s => s.Id == suggestionId)
+            .FirstOrDefaultAsync(ct)
+            ?? throw new SuggestionNotFoundException();
+
+        Trip trip = await db.Trips.FirstAsync(t => t.Id == suggestion.TripId, ct);
+        if (trip.CreatorId != creatorId)
+        {
+            throw new ForbiddenException();
+        }
+
+        DateTimeOffset now = timeProvider.GetUtcNow();
+        suggestion.Status = approved ? SuggestionStatus.Approved : SuggestionStatus.Discarded;
+        suggestion.Resolution = SuggestionResolution.Manual;
+        suggestion.ResolvedAt = now;
+        await db.SaveChangesAsync(ct);
+
+        // Overrides are transparent, never silent (spec §6.7) — the creator id and timestamp are
+        // the audit trail, same as the worker's coin-flip log, since there's no separate audit table yet.
+        logger.LogInformation(
+            "Suggestion {SuggestionId} manually {Status} by creator {CreatorId} at {ResolvedAt}",
+            suggestion.Id, suggestion.Status, creatorId, now);
+
+        await itinerarySync.SyncAsync(suggestion, ct);
+        await notifier.NotifyAsync(trip.Id, suggestion.Title, approved, ct);
+
+        return await GetByIdAsync(suggestion.Id, creatorId, ct);
     }
 
     /// <summary>Projects at the query level, filtering votes down to members still accepted on the
@@ -242,21 +304,6 @@ public class SuggestionService(
         {
             logger.LogWarning(ex, "Geocoding failed; suggestion coordinate left unresolved");
             return null;
-        }
-    }
-
-    /// <summary>Trip timezones are stored as free text, so an unusable id must not take the
-    /// request down — UTC keeps the clamp arithmetic sane and is logged for follow-up.</summary>
-    private TimeZoneInfo ResolveTimezone(string timezone)
-    {
-        try
-        {
-            return TimeZoneInfo.FindSystemTimeZoneById(timezone);
-        }
-        catch (Exception ex) when (ex is TimeZoneNotFoundException or InvalidTimeZoneException)
-        {
-            logger.LogWarning(ex, "Unrecognised trip timezone {Timezone}; falling back to UTC", timezone);
-            return TimeZoneInfo.Utc;
         }
     }
 
