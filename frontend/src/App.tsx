@@ -4,6 +4,7 @@ import { AuthProvider } from "./lib/auth/AuthContext";
 import { RequireAuth } from "./lib/auth/RequireAuth";
 import { AcceptInvitePage } from "./pages/AcceptInvitePage/AcceptInvitePage";
 import { ConfirmEmailPage } from "./pages/ConfirmEmailPage/ConfirmEmailPage";
+import { ItineraryPage } from "./pages/ItineraryPage/ItineraryPage";
 import { LoginPage } from "./pages/LoginPage/LoginPage";
 import { NewTripPage } from "./pages/NewTripPage/NewTripPage";
 import { ProfilePage } from "./pages/ProfilePage/ProfilePage";
@@ -29,6 +30,7 @@ function App() {
           <Route path="/trips" element={<TripsListPage />} />
           <Route path="/trips/new" element={<NewTripPage />} />
           <Route path="/trips/:id" element={<TripDetailPage />} />
+          <Route path="/trips/:id/itinerary" element={<ItineraryPage />} />
           <Route path="/invites/:token" element={<AcceptInvitePage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/settings" element={<SettingsPage />} />

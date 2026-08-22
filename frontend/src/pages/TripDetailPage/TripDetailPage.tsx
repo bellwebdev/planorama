@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { Button } from "../../components/Button/Button";
 import { Card } from "../../components/Card/Card";
 import { ErrorBanner } from "../../components/ErrorBanner/ErrorBanner";
@@ -135,6 +135,9 @@ export function TripDetailPage() {
       <div className={styles.header}>
         <h1>{trip.name}</h1>
         <span className={styles.status}>{trip.status}</span>
+        <Link to={`/trips/${trip.id}/itinerary`} className={styles.itineraryLink}>
+          View itinerary
+        </Link>
       </div>
 
       <Card className={styles.card}>
@@ -202,7 +205,7 @@ export function TripDetailPage() {
 
       <Card className={styles.card}>
         <h2 className={styles.sectionTitle}>Suggestions</h2>
-        <SuggestionsPanel tripId={trip.id} refreshKey={suggestionsRefreshKey} />
+        <SuggestionsPanel tripId={trip.id} refreshKey={suggestionsRefreshKey} isCreator={isCreator} />
       </Card>
 
       {isCreator && (

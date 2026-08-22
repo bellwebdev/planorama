@@ -213,3 +213,36 @@ export interface CreateSuggestionRequest {
 export interface CastVoteRequest {
   value: VoteValue;
 }
+
+export interface OverrideSuggestionRequest {
+  approved: boolean;
+}
+
+// Mirrors backend/src/Planorama.Api/Contracts/Itinerary/*.cs 1:1.
+
+export interface ItineraryItemResponse {
+  id: string;
+  tripId: string;
+  suggestionId: string | null;
+  title: string | null;
+  description: string | null;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+  /** Null means unscheduled — sits in the "unscheduled" tray until a creator sets a date. */
+  date: string | null;
+  startTime: string | null;
+  endTime: string | null;
+  sortOrder: number;
+  /** Null inherits trips.timezone. */
+  timezone: string | null;
+  createdAt: string;
+}
+
+export interface UpdateItineraryItemRequest {
+  date?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  sortOrder: number;
+  timezone?: string | null;
+}

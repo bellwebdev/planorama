@@ -30,9 +30,10 @@ interface SuggestionsPanelProps {
   tripId: string;
   /** Bumped by a sibling panel (e.g. "suggest this place" from search) to trigger a refetch. */
   refreshKey?: number;
+  isCreator?: boolean;
 }
 
-export function SuggestionsPanel({ tripId, refreshKey }: SuggestionsPanelProps) {
+export function SuggestionsPanel({ tripId, refreshKey, isCreator = false }: SuggestionsPanelProps) {
   const [suggestions, setSuggestions] = useState<SuggestionResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<unknown>(null);
@@ -150,7 +151,7 @@ export function SuggestionsPanel({ tripId, refreshKey }: SuggestionsPanelProps) 
 
       <ul className={styles.list}>
         {suggestions.map((s) => (
-          <SuggestionCard key={s.id} suggestion={s} onChange={updateSuggestion} />
+          <SuggestionCard key={s.id} suggestion={s} onChange={updateSuggestion} isCreator={isCreator} />
         ))}
       </ul>
     </div>

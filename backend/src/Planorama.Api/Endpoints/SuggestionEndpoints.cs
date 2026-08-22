@@ -40,5 +40,9 @@ public static class SuggestionEndpoints
         suggestionRoutes.MapPut("/{id:guid}/vote", async (
                 Guid id, CastVoteRequest request, ClaimsPrincipal user, ISuggestionService suggestions, CancellationToken ct) =>
             Results.Ok(SuggestionResponse.FromResult(await suggestions.CastVoteAsync(id, user.GetUserId(), request.Value, ct))));
+
+        suggestionRoutes.MapPut("/{id:guid}/override", async (
+                Guid id, OverrideSuggestionRequest request, ClaimsPrincipal user, ISuggestionService suggestions, CancellationToken ct) =>
+            Results.Ok(SuggestionResponse.FromResult(await suggestions.OverrideAsync(id, user.GetUserId(), request.Approved, ct))));
     }
 }

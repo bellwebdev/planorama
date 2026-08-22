@@ -6,7 +6,9 @@ using Planorama.Core.Data;
 using Planorama.Core.Domain;
 using Planorama.Core.Exceptions;
 using Planorama.Core.Integrations;
+using Planorama.Core.Itinerary;
 using Planorama.Core.Jobs;
+using Planorama.Core.Notifications;
 using Planorama.Core.Options;
 using Planorama.Core.Trips;
 
@@ -18,6 +20,8 @@ public class SuggestionService(
     IPlacesProvider places,
     IGeocodingProvider geocoder,
     IBackgroundJobClient backgroundJobClient,
+    VoteResultNotifier notifier,
+    ItinerarySyncService itinerarySync,
     IOptions<EmailOptions> emailOptions,
     TimeProvider timeProvider,
     ILogger<SuggestionService> logger) : ISuggestionService
@@ -58,7 +62,7 @@ public class SuggestionService(
                 command.ProposedDate,
                 command.ProposedStartTime,
                 trip.StartDate,
-                ResolveTimezone(trip.Timezone)),
+                TripTimeZone.Resolve(trip.Timezone, logger)),
             CreatedAt = timeProvider.GetUtcNow(),
         };
 
@@ -75,12 +79,7 @@ public class SuggestionService(
     /// touched their preferences, so the entity's default (opted in) applies (spec §8).</summary>
     private async Task NotifyMembersAsync(Trip trip, Suggestion suggestion, Guid suggesterId, CancellationToken ct)
     {
-        List<(string Email, string DisplayName)> recipients = await db.TripMembers
-            .Where(m => m.TripId == trip.Id && m.Status == TripMemberStatus.Accepted && m.UserId != suggesterId)
-            .Join(db.Users, m => m.UserId, u => u.Id, (_, u) => u)
-            .Where(u => u.Settings == null || u.Settings.NotifyEmail)
-            .Select(u => new ValueTuple<string, string>(u.Email!, u.DisplayName))
-            .ToListAsync(ct);
+        List<(string Email, string DisplayName)> recipients = await db.NotifiableMembers(trip.Id, suggesterId).ToListAsync(ct);
 
         var tripUrl = $"{_email.SuggestionUrlBase}/{trip.Id}";
         foreach ((string toEmail, string displayName) in recipients)
@@ -150,6 +149,39 @@ public class SuggestionService(
 
         await db.SaveChangesAsync(ct);
         return await GetByIdAsync(suggestionId, userId, ct);
+    }
+
+    /// <inheritdoc/>
+    public async Task<SuggestionResult> OverrideAsync(Guid suggestionId, Guid creatorId, bool approved, CancellationToken ct)
+    {
+        Suggestion suggestion = await db.Suggestions
+            .AccessibleBy(creatorId)
+            .Where(s => s.Id == suggestionId)
+            .FirstOrDefaultAsync(ct)
+            ?? throw new SuggestionNotFoundException();
+
+        Trip trip = await db.Trips.FirstAsync(t => t.Id == suggestion.TripId, ct);
+        if (trip.CreatorId != creatorId)
+        {
+            throw new ForbiddenException();
+        }
+
+        DateTimeOffset now = timeProvider.GetUtcNow();
+        suggestion.Status = approved ? SuggestionStatus.Approved : SuggestionStatus.Discarded;
+        suggestion.Resolution = SuggestionResolution.Manual;
+        suggestion.ResolvedAt = now;
+        await db.SaveChangesAsync(ct);
+
+        // Overrides are transparent, never silent (spec §6.7) — the creator id and timestamp are
+        // the audit trail, same as the worker's coin-flip log, since there's no separate audit table yet.
+        logger.LogInformation(
+            "Suggestion {SuggestionId} manually {Status} by creator {CreatorId} at {ResolvedAt}",
+            suggestion.Id, suggestion.Status, creatorId, now);
+
+        await itinerarySync.SyncAsync(suggestion, ct);
+        await notifier.NotifyAsync(trip.Id, suggestion.Title, approved, ct);
+
+        return await GetByIdAsync(suggestion.Id, creatorId, ct);
     }
 
     /// <summary>Projects at the query level, filtering votes down to members still accepted on the
@@ -272,21 +304,6 @@ public class SuggestionService(
         {
             logger.LogWarning(ex, "Geocoding failed; suggestion coordinate left unresolved");
             return null;
-        }
-    }
-
-    /// <summary>Trip timezones are stored as free text, so an unusable id must not take the
-    /// request down — UTC keeps the clamp arithmetic sane and is logged for follow-up.</summary>
-    private TimeZoneInfo ResolveTimezone(string timezone)
-    {
-        try
-        {
-            return TimeZoneInfo.FindSystemTimeZoneById(timezone);
-        }
-        catch (Exception ex) when (ex is TimeZoneNotFoundException or InvalidTimeZoneException)
-        {
-            logger.LogWarning(ex, "Unrecognised trip timezone {Timezone}; falling back to UTC", timezone);
-            return TimeZoneInfo.Utc;
         }
     }
 

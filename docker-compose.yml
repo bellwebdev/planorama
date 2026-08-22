@@ -60,6 +60,7 @@ services:
       Smtp__Username: ${SMTP_USERNAME}
       Smtp__Password: ${SMTP_PASSWORD}
       Email__FromAddress: ${EMAIL_FROM_ADDRESS:-no-reply@planorama.family}
+      Email__SuggestionUrlBase: ${FRONTEND_ORIGIN:-http://localhost:5173}/trips
     depends_on:
       db:
         condition: service_healthy

@@ -13,16 +13,27 @@ const STATUS_LABELS: Record<SuggestionResponse["status"], string> = {
   Expired: "Expired",
 };
 
+const RESOLUTION_LABELS: Record<NonNullable<SuggestionResponse["resolution"]>, string> = {
+  Majority: "by vote",
+  CoinFlip: "by coin flip (tie)",
+  NoQuorum: "no quorum",
+  Manual: "by trip creator",
+};
+
 interface SuggestionCardProps {
   suggestion: SuggestionResponse;
   onChange: (updated: SuggestionResponse) => void;
   /** Route distance/duration from the stay, if it's been fetched for this card. */
   route?: { distanceMeters: number; durationSeconds: number };
+  /** Trip creator can veto/force-approve a suggestion anytime (spec §6.7). */
+  isCreator?: boolean;
 }
 
-export function SuggestionCard({ suggestion, onChange, route }: SuggestionCardProps) {
+export function SuggestionCard({ suggestion, onChange, route, isCreator = false }: SuggestionCardProps) {
   const [voting, setVoting] = useState<VoteValue | null>(null);
   const [voteError, setVoteError] = useState<unknown>(null);
+  const [overriding, setOverriding] = useState<"Approved" | "Discarded" | null>(null);
+  const [overrideError, setOverrideError] = useState<unknown>(null);
 
   const isVotingOpen = suggestion.status === "Voting" && new Date(suggestion.votingClosesAt) > new Date();
 
@@ -35,6 +46,18 @@ export function SuggestionCard({ suggestion, onChange, route }: SuggestionCardPr
       setVoteError(err);
     } finally {
       setVoting(null);
+    }
+  }
+
+  async function override(approved: boolean) {
+    setOverriding(approved ? "Approved" : "Discarded");
+    setOverrideError(null);
+    try {
+      onChange(await suggestionsApi.overrideSuggestion(suggestion.id, { approved }));
+    } catch (err) {
+      setOverrideError(err);
+    } finally {
+      setOverriding(null);
     }
   }
 
@@ -93,6 +116,36 @@ export function SuggestionCard({ suggestion, onChange, route }: SuggestionCardPr
         </>
       ) : (
         <p className={styles.closedHint}>Voting closed.</p>
+      )}
+
+      {suggestion.resolution && (
+        <p className={styles.closedHint}>
+          {STATUS_LABELS[suggestion.status]} {RESOLUTION_LABELS[suggestion.resolution]}
+          {suggestion.resolvedAt &&
+            ` on ${new Date(suggestion.resolvedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}`}
+        </p>
+      )}
+
+      {isCreator && (
+        <>
+          <div className={styles.overrideRow}>
+            <Button
+              variant="tertiary"
+              onClick={() => void override(true)}
+              disabled={overriding !== null || suggestion.status === "Approved"}
+            >
+              {overriding === "Approved" ? "Approving…" : "Approve now"}
+            </Button>
+            <Button
+              variant="tertiary"
+              onClick={() => void override(false)}
+              disabled={overriding !== null || suggestion.status === "Discarded"}
+            >
+              {overriding === "Discarded" ? "Discarding…" : "Discard now"}
+            </Button>
+          </div>
+          <ErrorBanner error={overrideError} />
+        </>
       )}
 
       {suggestion.hasVoted ? (

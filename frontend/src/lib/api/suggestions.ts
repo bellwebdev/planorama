@@ -1,4 +1,9 @@
-import type { CastVoteRequest, CreateSuggestionRequest, SuggestionResponse } from "../../types/api";
+import type {
+  CastVoteRequest,
+  CreateSuggestionRequest,
+  OverrideSuggestionRequest,
+  SuggestionResponse,
+} from "../../types/api";
 import { apiRequest } from "./client";
 
 export function listSuggestions(tripId: string) {
@@ -19,4 +24,8 @@ export function createSuggestion(tripId: string, request: CreateSuggestionReques
 
 export function castVote(suggestionId: string, request: CastVoteRequest) {
   return apiRequest<SuggestionResponse>(`/suggestions/${suggestionId}/vote`, { method: "PUT", body: request });
+}
+
+export function overrideSuggestion(suggestionId: string, request: OverrideSuggestionRequest) {
+  return apiRequest<SuggestionResponse>(`/suggestions/${suggestionId}/override`, { method: "PUT", body: request });
 }

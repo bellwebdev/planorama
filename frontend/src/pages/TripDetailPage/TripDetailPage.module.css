@@ -20,6 +20,13 @@
   padding: 0.125rem var(--space-3);
 }
 
+.itineraryLink {
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+  color: var(--brand-primary);
+  margin-left: auto;
+}
+
 .card {
   display: flex;
   flex-direction: column;

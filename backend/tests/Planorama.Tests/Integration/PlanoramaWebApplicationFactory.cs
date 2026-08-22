@@ -10,6 +10,7 @@ using Planorama.Core.Caching;
 using Planorama.Core.Data;
 using Planorama.Core.Integrations;
 using Planorama.Core.Media;
+using Planorama.Core.Suggestions;
 using Testcontainers.PostgreSql;
 using Xunit;
 
@@ -95,6 +96,11 @@ public class PlanoramaWebApplicationFactory : WebApplicationFactory<Program>, IA
 
             services.RemoveAll<ICacheStore>();
             services.AddSingleton<ICacheStore, InMemoryCacheStore>();
+
+            // Singleton, not scoped: tests resolve this same instance from the factory afterwards
+            // to set FakeCoinFlip.NextResult before triggering resolution.
+            services.RemoveAll<ICoinFlip>();
+            services.AddSingleton<ICoinFlip, FakeCoinFlip>();
         });
     }
 

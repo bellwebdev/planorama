@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Planorama.Core.Data;
@@ -11,9 +12,11 @@ using Planorama.Core.Data;
 namespace Planorama.Core.Data.Migrations
 {
     [DbContext(typeof(PlanoramaDbContext))]
-    partial class PlanoramaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260821193324_AddItineraryItems")]
+    partial class AddItineraryItems
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -389,35 +392,6 @@ namespace Planorama.Core.Data.Migrations
                     b.ToTable("RefreshTokens");
                 });
 
-            modelBuilder.Entity("Planorama.Core.Domain.Reminder", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("HangfireJobId")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<Guid>("ItineraryItemId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("ScheduledForUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ItineraryItemId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Reminders");
-                });
-
             modelBuilder.Entity("Planorama.Core.Domain.Suggestion", b =>
                 {
                     b.Property<Guid>("Id")
@@ -733,23 +707,6 @@ namespace Planorama.Core.Data.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("Planorama.Core.Domain.Reminder", b =>
-                {
-                    b.HasOne("Planorama.Core.Domain.ItineraryItem", "ItineraryItem")
-                        .WithMany()
-                        .HasForeignKey("ItineraryItemId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Planorama.Core.Domain.AppUser", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ItineraryItem");
                 });
 
             modelBuilder.Entity("Planorama.Core.Domain.Suggestion", b =>

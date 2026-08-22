@@ -29,7 +29,10 @@ using Planorama.Core.Caching;
 using Planorama.Core.Data;
 using Planorama.Core.Domain;
 using Planorama.Core.Integrations;
+using Planorama.Core.Itinerary;
+using Planorama.Core.Jobs;
 using Planorama.Core.Media;
+using Planorama.Core.Notifications;
 using Planorama.Core.Options;
 using Planorama.Core.Places;
 using Planorama.Core.Profile;
@@ -134,6 +137,12 @@ try
     builder.Services.AddScoped<IInviteService, InviteService>();
     builder.Services.AddScoped<IPlaceService, PlaceService>();
     builder.Services.AddScoped<ISuggestionService, SuggestionService>();
+    builder.Services.AddScoped<ICoinFlip, CryptoCoinFlip>();
+    builder.Services.AddScoped<VoteResultNotifier>();
+    builder.Services.AddScoped<ReminderScheduler>();
+    builder.Services.AddScoped<ItinerarySyncService>();
+    builder.Services.AddScoped<IItineraryService, ItineraryService>();
+    builder.Services.AddScoped<IVotingResolutionJob, VotingResolutionService>();
 
     // Injected rather than calling DateTimeOffset.UtcNow inside the service, so voting-window
     // and window-closed behaviour is testable without waiting out a real clock.
@@ -315,6 +324,7 @@ try
     v1.MapInviteEndpoints();
     v1.MapPlaceEndpoints();
     v1.MapSuggestionEndpoints();
+    v1.MapItineraryEndpoints();
 
     app.Run();
 }

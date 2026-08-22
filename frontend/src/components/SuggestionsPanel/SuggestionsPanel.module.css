@@ -127,6 +127,11 @@
   color: var(--text-muted);
 }
 
+.overrideRow {
+  display: flex;
+  gap: var(--space-3);
+}
+
 .tally {
   display: flex;
   flex-direction: column;
